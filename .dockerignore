@@ -4,5 +4,6 @@ dist
 .env
 .github
 *.md
+docs
 tests
 target-app

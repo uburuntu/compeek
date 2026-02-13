@@ -6,6 +6,8 @@
 
 [Dashboard](https://compeek.rmbk.me) | [Docker Image](https://ghcr.io/uburuntu/compeek) | [npm](https://www.npmjs.com/package/@rmbk/compeek)
 
+![compeek — AI agent controlling a Linux desktop](docs/hero.png)
+
 ## Quick Start
 
 ```bash
@@ -36,17 +38,7 @@ Open the [dashboard](https://compeek.rmbk.me), paste your Anthropic API key in S
 
 ## Architecture
 
-```
-Browser (React dashboard)          Docker Container
-┌──────────────────────┐          ┌──────────────────────┐
-│  Agent Loop          │          │  Xvfb + Mutter       │
-│  ├─ Anthropic API    │  HTTP    │  ├─ Firefox          │
-│  └─ Tool dispatch ───┼─────────┼─▸ Tool Server :3000  │
-│                      │          │  │  └─ xdotool/scrot │
-│  Session Manager     │          │  ├─ noVNC :6080      │
-│  Settings (API key)  │          │  └─ VNC :5900        │
-└──────────────────────┘          └──────────────────────┘
-```
+![Architecture: browser-native agent loop communicates with Docker containers via HTTP](docs/architecture.png)
 
 The agent loop runs **in the browser** — it calls the Anthropic API directly and sends mouse/keyboard commands to Docker containers via HTTP. Each container is a stateless virtual desktop with a lightweight tool server. No backend needed.
 
