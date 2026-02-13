@@ -26,10 +26,10 @@ export default function WelcomeGuide({ onAddSession, onOpenSettings, hasApiKey }
           </Step>
 
           <Step n={2} title="Start a desktop container" done={false}>
-            <code className="block bg-compeek-bg border border-compeek-border rounded-lg p-2.5 text-[11px] font-mono text-compeek-text leading-relaxed select-all whitespace-pre-wrap">docker run -d --name compeek \{'\n'}  -p 3001:3000 -p 6081:6080 \{'\n'}  --shm-size=512m \{'\n'}  ghcr.io/uburuntu/compeek</code>
+            <code className="block bg-compeek-bg border border-compeek-border rounded-lg p-2.5 text-[11px] font-mono text-compeek-text leading-relaxed select-all whitespace-pre-wrap">npx @rmbk/compeek start</code>
             <p className="text-[10px] text-compeek-text-dim mt-1.5">
               No API key needed in Docker — the container is just a desktop + tool server.
-              Use <code>docker compose up</code> for 3 instances.
+              The CLI prints a connection string you can paste below.
             </p>
           </Step>
 

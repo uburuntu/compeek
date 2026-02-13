@@ -52,9 +52,9 @@ RUN npm install -g localtunnel
 RUN useradd -m -s /bin/bash compeek
 WORKDIR /home/compeek/app
 
-# Copy package.json and install dependencies
+# Copy package.json and install dependencies (including dev for build)
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Copy source and build the container server
 COPY tsconfig.json ./
@@ -63,6 +63,9 @@ COPY src/agent/tools.ts src/agent/types.ts src/agent/prompts.ts ./src/agent/
 COPY src/lib/ ./src/lib/
 
 RUN npx tsc --outDir dist
+
+# Remove dev dependencies after build
+RUN npm prune --omit=dev
 
 # Copy entrypoint script
 COPY docker/entrypoint.sh /home/compeek/entrypoint.sh
