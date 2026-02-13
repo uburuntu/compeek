@@ -1,127 +1,129 @@
-# compeek — AI Eyes & Hands for Any Desktop Application
+# compeek — AI Eyes & Hands for Any Desktop
 
-> A general-purpose computer use agent framework powered by Claude Opus 4.6. Define goals in natural language, point at any software, watch the agent work with full observability.
+> A computer use agent framework powered by Claude. Define goals in natural language, point at any software, watch the agent work.
 
 **No APIs. No plugins. No integrations. Just screen and keyboard.**
 
+[Dashboard](https://compeek.rmbk.me) | [Docker Image](https://ghcr.io/uburuntu/compeek) | [npm](https://www.npmjs.com/package/compeek)
+
+## Quick Start
+
+```bash
+# One-line install (Linux/macOS/WSL2)
+curl -fsSL https://compeek.rmbk.me/install.sh | bash
+
+# Or via npx
+npx compeek start --open
+
+# Or docker directly
+docker run -d -p 3001:3000 -p 6081:6080 --shm-size=512m ghcr.io/uburuntu/compeek
+```
+
+The container prints a **connection string** and a **clickable dashboard link** — no manual port entry needed. Check `docker logs compeek-1`.
+
+Open the [dashboard](https://compeek.rmbk.me), paste your Anthropic API key in Settings, and start a workflow.
+
 ## What is compeek?
 
-**compeek** (компик + peek) is a framework that turns Claude Opus 4.6 into an autonomous desktop agent. It can see any application through screenshots, interact via mouse and keyboard, read physical documents through vision, and validate its own work — all without requiring any integration with the target software.
+**compeek** (компик + peek) turns Claude into an autonomous desktop agent. It sees any application through screenshots, interacts via mouse and keyboard, and validates its own work — all without requiring any integration with the target software.
 
-### Key Capabilities
-
-- **See**: Screenshot any application + zoom into details (Opus 4.6 exclusive)
-- **Think**: Extended thinking for transparent reasoning about complex workflows
-- **Act**: Mouse clicks, keyboard input, scrolling — full desktop control
-- **Read**: Extract structured data from photos of documents (passports, IDs, invoices)
-- **Validate**: Self-check work by comparing filled forms against expected data
-- **Observe**: Real-time dashboard with agent vision overlay showing what the AI sees and thinks
-
-### Use Cases
-
-| Use Case | Description |
-|----------|-------------|
-| **Document → Form** | Upload a document photo, compeek fills any form application |
-| **Desktop Automation** | Natural language instructions to operate any software |
-| **Visual QA** | Test applications by describing expected behavior |
-| **Cross-App Workflows** | Chain actions across multiple disconnected applications |
-| **Legacy Software** | Automate systems with no API through GUI interaction |
+- **See** — screenshot any application + zoom into details
+- **Think** — extended thinking for transparent reasoning
+- **Act** — mouse clicks, keyboard input, scrolling
+- **Read** — extract data from document photos (passports, IDs, invoices)
+- **Validate** — self-check by comparing filled forms against expected data
+- **Observe** — real-time dashboard showing what the AI sees and thinks
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────┐
-│  Docker Container                         │
-│  ┌─────────────────────────────────┐     │
-│  │  Virtual Desktop (Xvfb + Mutter) │     │
-│  │  ┌───────────┐ ┌──────────────┐ │     │
-│  │  │  Firefox   │ │  Target App  │ │     │
-│  │  └───────────┘ └──────────────┘ │     │
-│  └──────────┬──────────────────────┘     │
-│             │ xdotool, scrot              │
-│  ┌──────────┴──────────────────────┐     │
-│  │  compeek Server (Node.js)        │     │
-│  │  ├── Agent Loop ↔ Anthropic API  │     │
-│  │  ├── WebSocket (real-time events)│     │
-│  │  └── REST API (workflow control) │     │
-│  └──────────┬──────────────────────┘     │
-│             │ :3000 :6080 :5900           │
-└─────────────┼────────────────────────────┘
-              │
-         Browser: compeek Dashboard (React)
+Browser (React dashboard)          Docker Container
+┌──────────────────────┐          ┌──────────────────────┐
+│  Agent Loop          │          │  Xvfb + Mutter       │
+│  ├─ Anthropic API    │  HTTP    │  ├─ Firefox          │
+│  └─ Tool dispatch ───┼─────────┼─▸ Tool Server :3000  │
+│                      │          │  │  └─ xdotool/scrot │
+│  Session Manager     │          │  ├─ noVNC :6080      │
+│  Settings (API key)  │          │  └─ VNC :5900        │
+└──────────────────────┘          └──────────────────────┘
 ```
 
-## Quick Start
+The agent loop runs **in the browser** — it calls the Anthropic API directly and sends mouse/keyboard commands to Docker containers via HTTP. Each container is a stateless virtual desktop with a lightweight tool server. No backend needed.
 
-### Prerequisites
+## Desktop Modes
 
-- Docker
-- An Anthropic API key with Opus 4.6 access
+Set `DESKTOP_MODE` when starting a container:
 
-### Run
+| Mode | What starts | Use case |
+|------|-------------|----------|
+| `full` (default) | Xvfb + Mutter + Tint2 + Firefox + target app | QA testing with pre-loaded app |
+| `browser` | Xvfb + Mutter + Firefox | General web browsing agent |
+| `minimal` | Xvfb + Mutter only | Agent launches everything itself |
+| `headless` | Xvfb + tool server only | API-only, bash commands only |
 
 ```bash
-# Set your API key
-export ANTHROPIC_API_KEY=your_key_here
-
-# Build and run
-docker compose up --build
-
-# Open in browser
-# Dashboard: http://localhost:3000
-# Desktop VNC: http://localhost:6080
+npx compeek start --mode browser
+# or
+docker run -d -e DESKTOP_MODE=browser -p 3001:3000 -p 6081:6080 --shm-size=512m ghcr.io/uburuntu/compeek
 ```
 
-### Development
+## Connection Strings
+
+Containers print a base64-encoded config and a dashboard link on startup:
+
+```
+Connection string: eyJuYW1lIj...
+Dashboard link:    https://compeek.rmbk.me/#config=eyJuYW1lIj...
+```
+
+Three ways to connect:
+1. **Click the link** — auto-adds the session
+2. **Paste the string** in the Add Session dialog
+3. **Manual entry** — type host and ports
+
+## CLI
 
 ```bash
-# Install dependencies
+npx compeek start          # Pull image, start container, print connection info
+npx compeek start --open   # Same + open dashboard in browser
+npx compeek stop           # Stop all compeek containers
+npx compeek stop 1         # Stop compeek-1
+npx compeek status         # List running containers
+npx compeek logs           # Follow container logs
+npx compeek open           # Open dashboard with auto-connect URL
+```
+
+Flags for `start`: `--name`, `--api-port`, `--vnc-port`, `--mode`, `--no-pull`, `--open`.
+
+## Development
+
+```bash
 npm install
-
-# Build
-npm run build
-
-# Run server (requires Docker desktop environment)
-npm run dev
+npm run dev:client         # Vite dev server on :5173
+npm run build              # tsc + vite build
+npm test                   # 19 tests
+docker compose up --build  # 3 containers on ports 3001-3003 / 6081-6083
 ```
-
-## Tech Stack
-
-- **TypeScript** — Full-stack, single codebase
-- **Claude Opus 4.6** — Computer use (`computer_20251124`), vision, extended thinking, zoom
-- **React + Vite + TailwindCSS** — Dashboard with real-time agent overlay
-- **Express + WebSocket** — Backend API with live event streaming
-- **Docker** — Sandboxed desktop environment (Xvfb, Mutter, noVNC, Firefox)
-
-## Opus 4.6 Features Used
-
-| Feature | Usage |
-|---------|-------|
-| Computer Use (`computer_20251124`) | Core desktop interaction: screenshot, mouse, keyboard |
-| **Zoom** (NEW) | Inspect screen regions at full resolution for reading small text |
-| Extended Thinking | Transparent reasoning shown in real-time UI |
-| Vision | Extract data from document photos |
-| Agent Loop | Autonomous multi-step task execution |
 
 ## Project Structure
 
 ```
 compeek/
 ├── src/
-│   ├── agent/          # Agent loop, tool implementations, prompts
-│   ├── workflow/       # Workflow engine, validation
-│   ├── server/         # Express + WebSocket server
-│   └── app/            # React dashboard
-├── target-app/         # Demo form application
-├── docker/             # Dockerfile
+│   ├── agent/             # Shared tools, types, prompts
+│   ├── app/               # React dashboard (Vite)
+│   ├── container/         # Express tool server (Docker)
+│   └── lib/               # Logger
+├── bin/compeek.mjs        # CLI (npx compeek)
+├── install.sh             # One-line installer
+├── docker/                # Dockerfile + entrypoint
+├── target-app/            # Demo form application
 └── docker-compose.yml
 ```
 
 ## Built for
 
 **"Built with Opus 4.6: a Claude Code Hackathon"** by Anthropic (Feb 2026)
-
-Problem Statement 1: **Build a Tool That Should Exist** — compeek makes any existing software AI-capable without touching its code.
 
 ## License
 

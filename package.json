@@ -6,7 +6,7 @@
   "author": "rmbk",
   "repository": {
     "type": "git",
-    "url": "https://github.com/uburuntu/compeek"
+    "url": "git+https://github.com/uburuntu/compeek.git"
   },
   "engines": {
     "node": ">=20"
@@ -23,7 +23,7 @@
   ],
   "type": "module",
   "bin": {
-    "compeek": "./bin/compeek.mjs"
+    "compeek": "bin/compeek.mjs"
   },
   "scripts": {
     "dev:client": "vite",
