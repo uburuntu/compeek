@@ -64,10 +64,6 @@ COPY src/lib/ ./src/lib/
 
 RUN npx tsc --outDir dist
 
-# Copy target app
-RUN mkdir -p /home/compeek/target-app
-COPY target-app/ /home/compeek/target-app/
-
 # Copy entrypoint script
 COPY docker/entrypoint.sh /home/compeek/entrypoint.sh
 RUN chmod +x /home/compeek/entrypoint.sh
