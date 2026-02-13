@@ -16,7 +16,8 @@ npm run test:watch         # vitest watch mode
 npx vitest run tests/agent/tools.test.ts          # single test file
 npx vitest run -t "handles screenshot action"     # single test by name
 docker compose up --build  # 3 desktop containers on ports 3001-3003 / 6081-6083
-npx compeek start          # CLI: pull image, start container, print connection string
+npx @rmbk/compeek start          # CLI: pull image, start container, print connection string
+git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version from tag)
 ```
 
 ## Architecture
@@ -47,7 +48,7 @@ npx compeek start          # CLI: pull image, start container, print connection 
 - **Prompts**: `src/agent/prompts.ts` — `SYSTEM_PROMPT_BASE`, `FORM_FILL_PROMPT`, `GENERAL_WORKFLOW_PROMPT`. Imported in the browser via Vite `@/` alias.
 - **Session management**: `src/app/hooks/useSession.ts` (per-session state + agent loop), `src/app/hooks/useSessionManager.ts` (CRUD + localStorage). API key stored in browser via `useSettings.ts`.
 - **Connection strings**: `src/app/App.tsx` reads `#config=` from URL hash on mount. `src/app/components/AddSessionDialog.tsx` has a paste box for base64 strings or dashboard URLs.
-- **CLI**: `bin/compeek.mjs` — zero-dep Node.js CLI (`start`, `stop`, `status`, `logs`, `open`). Registered as `"bin"` in `package.json` for `npx compeek`.
+- **CLI**: `bin/compeek.mjs` — zero-dep Node.js CLI (`start`, `stop`, `status`, `logs`, `open`). Published as `@rmbk/compeek` on npm, run via `npx @rmbk/compeek`.
 - **Tailwind theme**: Custom `compeek-*` color tokens in `tailwind.config.js` (dark theme).
 
 ## Build details

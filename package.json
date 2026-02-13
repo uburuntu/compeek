@@ -1,6 +1,6 @@
 {
-  "name": "compeek",
-  "version": "0.2.0",
+  "name": "@rmbk/compeek",
+  "version": "0.0.0",
   "description": "AI eyes and hands for any desktop application — a general-purpose computer use agent framework powered by Claude Opus 4.6",
   "license": "MIT",
   "author": "rmbk",
@@ -25,6 +25,9 @@
   "bin": {
     "compeek": "bin/compeek.mjs"
   },
+  "files": [
+    "bin/"
+  ],
   "scripts": {
     "dev:client": "vite",
     "build": "tsc && vite build",

@@ -4,7 +4,7 @@
 
 **No APIs. No plugins. No integrations. Just screen and keyboard.**
 
-[Dashboard](https://compeek.rmbk.me) | [Docker Image](https://ghcr.io/uburuntu/compeek) | [npm](https://www.npmjs.com/package/compeek)
+[Dashboard](https://compeek.rmbk.me) | [Docker Image](https://ghcr.io/uburuntu/compeek) | [npm](https://www.npmjs.com/package/@rmbk/compeek)
 
 ## Quick Start
 
@@ -13,7 +13,7 @@
 curl -fsSL https://compeek.rmbk.me/install.sh | bash
 
 # Or via npx
-npx compeek start --open
+npx @rmbk/compeek start --open
 
 # Or docker directly
 docker run -d -p 3001:3000 -p 6081:6080 --shm-size=512m ghcr.io/uburuntu/compeek
@@ -62,7 +62,7 @@ Set `DESKTOP_MODE` when starting a container:
 | `headless` | Xvfb + tool server only | API-only, bash commands only |
 
 ```bash
-npx compeek start --mode browser
+npx @rmbk/compeek start --mode browser
 # or
 docker run -d -e DESKTOP_MODE=browser -p 3001:3000 -p 6081:6080 --shm-size=512m ghcr.io/uburuntu/compeek
 ```
@@ -84,13 +84,13 @@ Three ways to connect:
 ## CLI
 
 ```bash
-npx compeek start          # Pull image, start container, print connection info
-npx compeek start --open   # Same + open dashboard in browser
-npx compeek stop           # Stop all compeek containers
-npx compeek stop 1         # Stop compeek-1
-npx compeek status         # List running containers
-npx compeek logs           # Follow container logs
-npx compeek open           # Open dashboard with auto-connect URL
+npx @rmbk/compeek start          # Pull image, start container, print connection info
+npx @rmbk/compeek start --open   # Same + open dashboard in browser
+npx @rmbk/compeek stop           # Stop all compeek containers
+npx @rmbk/compeek stop 1         # Stop compeek-1
+npx @rmbk/compeek status         # List running containers
+npx @rmbk/compeek logs           # Follow container logs
+npx @rmbk/compeek open           # Open dashboard with auto-connect URL
 ```
 
 Flags for `start`: `--name`, `--api-port`, `--vnc-port`, `--mode`, `--no-pull`, `--open`.
