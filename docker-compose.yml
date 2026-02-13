@@ -1,0 +1,75 @@
+services:
+  compeek-1:
+    image: ghcr.io/uburuntu/compeek:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      - DISPLAY=:1
+      - WIDTH=1024
+      - HEIGHT=768
+      - DESKTOP_MODE=full
+      - COMPEEK_SESSION_NAME=Desktop 1
+    ports:
+      - "3001:3000"
+      - "5901:5900"
+      - "6081:6080"
+      - "8081:8080"
+    shm_size: '512m'
+    security_opt:
+      - seccomp=unconfined
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  compeek-2:
+    image: ghcr.io/uburuntu/compeek:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      - DISPLAY=:1
+      - WIDTH=1024
+      - HEIGHT=768
+      - DESKTOP_MODE=full
+      - COMPEEK_SESSION_NAME=Desktop 2
+    ports:
+      - "3002:3000"
+      - "5902:5900"
+      - "6082:6080"
+      - "8082:8080"
+    shm_size: '512m'
+    security_opt:
+      - seccomp=unconfined
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  compeek-3:
+    image: ghcr.io/uburuntu/compeek:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      - DISPLAY=:1
+      - WIDTH=1024
+      - HEIGHT=768
+      - DESKTOP_MODE=full
+      - COMPEEK_SESSION_NAME=Desktop 3
+    ports:
+      - "3003:3000"
+      - "5903:5900"
+      - "6083:6080"
+      - "8083:8080"
+    shm_size: '512m'
+    security_opt:
+      - seccomp=unconfined
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
