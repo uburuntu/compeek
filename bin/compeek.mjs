@@ -149,7 +149,7 @@ async function cmdStart(args) {
     `--shm-size=512m`,
     `-e DISPLAY=:1`,
     `-e DESKTOP_MODE=${mode}`,
-    `-e COMPEEK_SESSION_NAME=${sessionName}`,
+    `-e COMPEEK_SESSION_NAME="${sessionName}"`,
     `--security-opt seccomp=unconfined`,
     IMAGE,
   ].join(' '));
