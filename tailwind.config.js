@@ -18,6 +18,7 @@ export default {
         },
       },
       fontFamily: {
+        sans: ['Outfit', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
     },

@@ -5,6 +5,7 @@
 
 import { execSync, spawn } from 'node:child_process';
 import http from 'node:http';
+import crypto from 'node:crypto';
 
 const IMAGE = 'ghcr.io/uburuntu/compeek:latest';
 const CONTAINER_PREFIX = 'compeek-';
@@ -95,9 +96,10 @@ function waitForHealth(host, port, timeout) {
   });
 }
 
-function buildConnectionString(name, apiHost, apiPort, vncHost, vncPort) {
-  const config = JSON.stringify({ name, type: 'compeek', apiHost, apiPort, vncHost, vncPort });
-  return Buffer.from(config).toString('base64');
+function buildConnectionString(name, apiHost, apiPort, vncHost, vncPort, vncPassword) {
+  const config = { name, type: 'compeek', apiHost, apiPort, vncHost, vncPort };
+  if (vncPassword) config.vncPassword = vncPassword;
+  return Buffer.from(JSON.stringify(config)).toString('base64');
 }
 
 function openUrl(url) {
@@ -125,6 +127,7 @@ async function cmdStart(args) {
   const apiPort = parseInt(flags['api-port']) || defaultApi;
   const vncPort = parseInt(flags['vnc-port']) || defaultVnc;
   const mode = flags.mode || 'full';
+  const vncPassword = flags.password || crypto.randomBytes(6).toString('base64url').slice(0, 8);
   const sessionName = name.replace(CONTAINER_PREFIX, '').replace(/^(\d+)$/, 'Desktop $1');
 
   if (!flags['no-pull']) {
@@ -136,7 +139,7 @@ async function cmdStart(args) {
     }
   }
 
-  console.log(`Starting ${name} (api:${apiPort}, vnc:${vncPort}, mode:${mode})...`);
+  console.log(`Starting ${name} (api:${apiPort}, vnc:${vncPort}, mode:${mode}${flags.persist ? ', persist:on' : ''})...`);
 
   // Remove existing container with same name if stopped
   run(`docker rm -f ${name}`, { allowFail: true });
@@ -150,9 +153,12 @@ async function cmdStart(args) {
     `-e DISPLAY=:1`,
     `-e DESKTOP_MODE=${mode}`,
     `-e COMPEEK_SESSION_NAME="${sessionName}"`,
+    `-e VNC_PASSWORD="${vncPassword}"`,
+    flags.tunnel ? '-e ENABLE_TUNNEL=true' : '',
+    flags.persist ? `-v ${name}-data:/home/compeek/data` : '',
     `--security-opt seccomp=unconfined`,
     IMAGE,
-  ].join(' '));
+  ].filter(Boolean).join(' '));
 
   console.log('Waiting for container to be ready...');
 
@@ -164,7 +170,7 @@ async function cmdStart(args) {
     process.exit(1);
   }
 
-  const connStr = buildConnectionString(sessionName, 'localhost', apiPort, 'localhost', vncPort);
+  const connStr = buildConnectionString(sessionName, 'localhost', apiPort, 'localhost', vncPort, vncPassword);
 
   console.log('');
   console.log('=========================================');
@@ -173,6 +179,7 @@ async function cmdStart(args) {
   console.log(`  Tool API : http://localhost:${apiPort}`);
   if (mode !== 'headless') {
     console.log(`  noVNC    : http://localhost:${vncPort}`);
+    console.log(`  VNC pass : ${vncPassword}`);
   }
   console.log('');
   console.log('  Connection string:');
@@ -284,7 +291,7 @@ function parseFlags(args) {
     const arg = args[i];
     if (arg.startsWith('--')) {
       const key = arg.slice(2);
-      if (key === 'open' || key === 'no-pull') {
+      if (key === 'open' || key === 'no-pull' || key === 'persist' || key === 'tunnel') {
         flags[key] = true;
       } else if (i + 1 < args.length && !args[i + 1].startsWith('--')) {
         flags[key] = args[++i];
@@ -334,6 +341,9 @@ Start options:
   --api-port <p>   Host port for tool API (default: auto)
   --vnc-port <p>   Host port for noVNC (default: auto)
   --mode <m>       Desktop mode: full|browser|minimal|headless
+  --persist        Mount a named volume for persistent data
+  --password <pw>  Set a custom VNC password (auto-generated if omitted)
+  --tunnel         Enable localtunnel for remote access
   --no-pull        Skip docker pull
   --open           Open dashboard after start
 `);

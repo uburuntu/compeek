@@ -2,8 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { SYSTEM_PROMPT_BASE, FORM_FILL_PROMPT, GENERAL_WORKFLOW_PROMPT } from '@/agent/prompts';
 import type { AgentEvent, ComputerAction } from '@/agent/types';
 
-const DISPLAY_WIDTH = 1024;
-const DISPLAY_HEIGHT = 768;
+const DISPLAY_WIDTH = 1280;
+const DISPLAY_HEIGHT = 720;
 const MAX_TOKENS = 16384;
 const THINKING_BUDGET = 10240;
 const DEFAULT_MAX_ITERATIONS = 50;
@@ -58,6 +58,95 @@ function describeAction(action: ComputerAction): string {
     case 'zoom': return `Zooming into region [${action.region.join(', ')}]`;
     case 'wait': return `Waiting ${action.duration}s`;
     default: return `Action: ${(action as ComputerAction).action}`;
+  }
+}
+
+// --- Text editor tool helpers ---
+
+interface TextEditorInput {
+  command: 'view' | 'create' | 'str_replace' | 'insert';
+  path: string;
+  file_text?: string;
+  old_str?: string;
+  new_str?: string;
+  insert_line?: number;
+  view_range?: [number, number];
+}
+
+function shellEscape(s: string): string {
+  return "'" + s.replace(/'/g, "'\\''") + "'";
+}
+
+function buildTextEditorCommand(input: TextEditorInput): string {
+  switch (input.command) {
+    case 'view': {
+      if (input.view_range) {
+        const [start, end] = input.view_range;
+        return `sed -n '${start},${end}p' ${shellEscape(input.path)} | cat -n`;
+      }
+      return `cat -n ${shellEscape(input.path)}`;
+    }
+    case 'create': {
+      const dir = input.path.substring(0, input.path.lastIndexOf('/'));
+      const content = input.file_text || '';
+      return `mkdir -p ${shellEscape(dir)} && cat > ${shellEscape(input.path)} << 'COMPEEK_EOF'\n${content}\nCOMPEEK_EOF`;
+    }
+    case 'str_replace': {
+      const oldStr = input.old_str || '';
+      const newStr = input.new_str || '';
+      // Use python3 for reliable multi-line string replacement
+      const pyScript = `
+import sys
+path = ${JSON.stringify(input.path)}
+old = ${JSON.stringify(oldStr)}
+new = ${JSON.stringify(newStr)}
+with open(path, 'r') as f:
+    content = f.read()
+count = content.count(old)
+if count == 0:
+    print(f"Error: string not found in {path}", file=sys.stderr)
+    sys.exit(1)
+if count > 1:
+    print(f"Error: found {count} occurrences, expected exactly 1", file=sys.stderr)
+    sys.exit(1)
+content = content.replace(old, new, 1)
+with open(path, 'w') as f:
+    f.write(content)
+print(f"Replaced 1 occurrence in {path}")
+`.trim();
+      return `python3 -c ${shellEscape(pyScript)}`;
+    }
+    case 'insert': {
+      const lineNum = input.insert_line || 0;
+      const newStr = input.new_str || '';
+      const pyScript = `
+import sys
+path = ${JSON.stringify(input.path)}
+line_num = ${lineNum}
+new_text = ${JSON.stringify(newStr)}
+with open(path, 'r') as f:
+    lines = f.readlines()
+new_lines = new_text.split('\\n')
+for i, line in enumerate(new_lines):
+    lines.insert(line_num + i, line + '\\n')
+with open(path, 'w') as f:
+    f.writelines(lines)
+print(f"Inserted {len(new_lines)} line(s) at line {line_num} in {path}")
+`.trim();
+      return `python3 -c ${shellEscape(pyScript)}`;
+    }
+    default:
+      return `echo "Unknown text editor command: ${(input as TextEditorInput).command}"`;
+  }
+}
+
+function describeTextEditorAction(input: TextEditorInput): string {
+  switch (input.command) {
+    case 'view': return `Viewing ${input.path}${input.view_range ? ` (lines ${input.view_range[0]}-${input.view_range[1]})` : ''}`;
+    case 'create': return `Creating ${input.path}`;
+    case 'str_replace': return `Editing ${input.path}`;
+    case 'insert': return `Inserting at line ${input.insert_line} in ${input.path}`;
+    default: return `Text editor: ${(input as TextEditorInput).command}`;
   }
 }
 
@@ -203,7 +292,23 @@ export async function agentLoop(
             toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result.output || 'Command executed successfully (no output).' });
           }
         } else if (block.name === 'str_replace_based_edit_tool') {
-          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: 'Text editor operations are available via bash.' });
+          const input = block.input as TextEditorInput;
+
+          onEvent?.(makeEvent('action', {
+            type: 'action',
+            action: input.command,
+            params: block.input as Record<string, unknown>,
+            description: describeTextEditorAction(input),
+          }));
+
+          const command = buildTextEditorCommand(input);
+          const result = await executeBashRemote(request.containerUrl, command);
+
+          if (result.error) {
+            toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${result.error}`, is_error: true });
+          } else {
+            toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result.output || 'Operation completed successfully.' });
+          }
         }
       }
     }

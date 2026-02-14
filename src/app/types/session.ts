@@ -6,6 +6,7 @@ export interface SessionConfig {
   apiPort: number;
   vncHost: string;
   vncPort: number;
+  vncPassword?: string;
 }
 
 export type SessionStatus = 'connected' | 'disconnected' | 'reconnecting';

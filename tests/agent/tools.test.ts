@@ -57,9 +57,9 @@ describe('Computer Use Tools', () => {
         expect.stringContaining('xdotool mousemove --sync 0 0 click 1')
       );
 
-      await executeAction({ action: 'left_click', coordinate: [1024, 768] });
+      await executeAction({ action: 'left_click', coordinate: [1280, 720] });
       expect(mockExecSync).toHaveBeenCalledWith(
-        expect.stringContaining('xdotool mousemove --sync 1024 768 click 1')
+        expect.stringContaining('xdotool mousemove --sync 1280 720 click 1')
       );
     });
   });

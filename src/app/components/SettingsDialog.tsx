@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Settings } from '../hooks/useSettings';
+import Tooltip from './Tooltip';
 
 interface Props {
   open: boolean;
@@ -20,18 +21,34 @@ export default function SettingsDialog({ open, settings, onUpdate, onClose }: Pr
   };
 
   const masked = apiKey ? apiKey.slice(0, 10) + '...' + apiKey.slice(-4) : '';
+  const looksInvalid = apiKey.trim() && !apiKey.trim().startsWith('sk-ant-');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-compeek-surface border border-compeek-border rounded-xl shadow-2xl w-[420px] p-5" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-backdrop-in" onClick={onClose}>
+      <div className="bg-compeek-surface border border-compeek-border rounded-xl shadow-2xl w-[420px] p-5 animate-dialog-in" onClick={e => e.stopPropagation()}>
         <h2 className="text-sm font-semibold text-compeek-text mb-4">Settings</h2>
 
         <div className="space-y-4">
           {/* API Key */}
           <div>
-            <label className="text-[10px] text-compeek-text-dim font-medium uppercase tracking-wider block mb-1">
-              Anthropic API Key
-            </label>
+            <Tooltip content="Get your key at console.anthropic.com. It never leaves your browser.">
+              <label className="text-[10px] text-compeek-text-dim font-medium uppercase tracking-wider block mb-1 cursor-help">
+                Anthropic API Key
+              </label>
+            </Tooltip>
+
+            {/* Get key link */}
+            {!apiKey && (
+              <div className="bg-compeek-accent/10 border border-compeek-accent/20 rounded-lg px-3 py-2 mb-2">
+                <p className="text-xs text-compeek-accent">
+                  Don't have a key?{' '}
+                  <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-compeek-accent-bright">
+                    Get yours at console.anthropic.com
+                  </a>
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <input
                 type={showKey ? 'text' : 'password'}
@@ -48,10 +65,15 @@ export default function SettingsDialog({ open, settings, onUpdate, onClose }: Pr
               </button>
             </div>
             <p className="text-[10px] text-compeek-text-dim mt-1.5">
-              Sent as <code className="text-compeek-accent/70">x-api-key</code> header to compeek backends. Stored locally in your browser.
+              Stored in your browser. Never sent to us — only to the AI when running tasks.
             </p>
             {apiKey && !showKey && (
               <p className="text-[10px] text-compeek-text-dim mt-1 font-mono">{masked}</p>
+            )}
+            {looksInvalid && (
+              <p className="text-[10px] text-compeek-warning mt-1">
+                This doesn't look like an Anthropic key (usually starts with sk-ant-). Double-check you copied the full key.
+              </p>
             )}
           </div>
 
@@ -62,21 +84,22 @@ export default function SettingsDialog({ open, settings, onUpdate, onClose }: Pr
             </label>
             <div className="flex gap-1 bg-compeek-bg rounded-lg p-0.5">
               {[
-                { id: 'claude-haiku-4-5', label: 'Haiku 4.5' },
-                { id: 'claude-sonnet-4-5', label: 'Sonnet 4.5' },
-                { id: 'claude-opus-4-6', label: 'Opus 4.6' },
+                { id: 'claude-haiku-4-5', label: 'Haiku 4.5', tip: 'Fastest and cheapest. Good for simple, quick tasks.' },
+                { id: 'claude-sonnet-4-5', label: 'Sonnet 4.5', tip: 'Best balance of speed and quality. Recommended for most tasks.' },
+                { id: 'claude-opus-4-6', label: 'Opus 4.6', tip: 'Most powerful. Best for complex multi-step workflows.' },
               ].map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => onUpdate({ lastModel: m.id })}
-                  className={`flex-1 text-xs py-1 rounded-md transition-colors font-medium ${
-                    settings.lastModel === m.id
-                      ? 'bg-compeek-accent/20 text-compeek-accent border border-compeek-accent/40'
-                      : 'text-compeek-text-dim hover:text-compeek-text border border-transparent'
-                  }`}
-                >
-                  {m.label}
-                </button>
+                <Tooltip key={m.id} content={m.tip}>
+                  <button
+                    onClick={() => onUpdate({ lastModel: m.id })}
+                    className={`flex-1 text-xs py-1 rounded-md transition-colors font-medium ${
+                      settings.lastModel === m.id
+                        ? 'bg-compeek-accent/20 text-compeek-accent border border-compeek-accent/40'
+                        : 'text-compeek-text-dim hover:text-compeek-text border border-transparent'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                </Tooltip>
               ))}
             </div>
           </div>

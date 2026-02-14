@@ -4,6 +4,11 @@ set -e
 DESKTOP_MODE="${DESKTOP_MODE:-full}"
 DASHBOARD_URL="${DASHBOARD_URL:-https://compeek.rmbk.me}"
 
+# Auto-generate VNC password if not provided
+if [ -z "$VNC_PASSWORD" ]; then
+  VNC_PASSWORD=$(head -c 12 /dev/urandom | base64 | tr -d '/+=' | head -c 8)
+fi
+
 echo ""
 echo "========================================="
 echo "  compeek desktop container"
@@ -16,7 +21,7 @@ STEP=1
 
 # 1. Start Xvfb (always needed — tool server uses DISPLAY for screenshots)
 echo "[${STEP}] Starting Xvfb..."
-Xvfb :1 -screen 0 ${WIDTH:-1024}x${HEIGHT:-768}x24 -ac &
+Xvfb :1 -screen 0 ${WIDTH:-1280}x${HEIGHT:-720}x24 -ac &
 sleep 1
 STEP=$((STEP + 1))
 
@@ -39,7 +44,13 @@ fi
 # 4. Start VNC + noVNC (skip in headless)
 if [ "$DESKTOP_MODE" != "headless" ]; then
   echo "[${STEP}] Starting x11vnc..."
-  x11vnc -display :1 -nopw -listen 0.0.0.0 -rfbport 5900 -forever -shared -bg
+  VNC_ARGS="-display :1 -listen 0.0.0.0 -rfbport 5900 -forever -shared -bg"
+  # Set up password file
+  mkdir -p /home/compeek/.vnc
+  x11vnc -storepasswd "$VNC_PASSWORD" /home/compeek/.vnc/passwd
+  VNC_ARGS="$VNC_ARGS -rfbauth /home/compeek/.vnc/passwd"
+  echo "  VNC password: $VNC_PASSWORD"
+  x11vnc $VNC_ARGS
   STEP=$((STEP + 1))
 
   echo "[${STEP}] Starting noVNC on port 6080..."
@@ -48,7 +59,17 @@ if [ "$DESKTOP_MODE" != "headless" ]; then
   STEP=$((STEP + 1))
 fi
 
-# 5. Start target app + Firefox (full mode only)
+# 5. Firefox profile persistence (when data volume is mounted)
+FIREFOX_PROFILE_ARGS=""
+if mountpoint -q /home/compeek/data 2>/dev/null; then
+  FIREFOX_PROFILE_DIR="/home/compeek/data/firefox-profile"
+  mkdir -p "$FIREFOX_PROFILE_DIR"
+  FIREFOX_PROFILE_ARGS="--profile $FIREFOX_PROFILE_DIR"
+  echo "[${STEP}] Using persistent Firefox profile: $FIREFOX_PROFILE_DIR"
+  STEP=$((STEP + 1))
+fi
+
+# 6. Start target app + Firefox (full mode only)
 if [ "$DESKTOP_MODE" = "full" ]; then
   if [ -d /home/compeek/target-app ]; then
     echo "[${STEP}] Starting target app on port 8080..."
@@ -57,7 +78,7 @@ if [ "$DESKTOP_MODE" = "full" ]; then
     sleep 0.5
 
     echo "[${STEP}] Opening Firefox..."
-    DISPLAY=:1 firefox http://localhost:8080 &
+    DISPLAY=:1 firefox $FIREFOX_PROFILE_ARGS http://localhost:8080 &
     sleep 2
     STEP=$((STEP + 1))
   else
@@ -66,7 +87,7 @@ if [ "$DESKTOP_MODE" = "full" ]; then
   fi
 elif [ "$DESKTOP_MODE" = "browser" ]; then
   echo "[${STEP}] Opening Firefox..."
-  DISPLAY=:1 firefox &
+  DISPLAY=:1 firefox $FIREFOX_PROFILE_ARGS &
   sleep 2
   STEP=$((STEP + 1))
 fi
@@ -83,7 +104,7 @@ SESSION_NAME="${COMPEEK_SESSION_NAME:-Desktop}"
 API_PORT="${PORT:-3000}"
 VNC_PORT="6080"
 
-CONFIG_JSON="{\"name\":\"${SESSION_NAME}\",\"type\":\"compeek\",\"apiHost\":\"localhost\",\"apiPort\":${API_PORT},\"vncHost\":\"localhost\",\"vncPort\":${VNC_PORT}}"
+CONFIG_JSON="{\"name\":\"${SESSION_NAME}\",\"type\":\"compeek\",\"apiHost\":\"localhost\",\"apiPort\":${API_PORT},\"vncHost\":\"localhost\",\"vncPort\":${VNC_PORT},\"vncPassword\":\"${VNC_PASSWORD}\"}"
 CONFIG_B64=$(echo -n "$CONFIG_JSON" | base64 -w 0 2>/dev/null || echo -n "$CONFIG_JSON" | base64)
 
 echo ""
@@ -104,8 +125,12 @@ echo "  ${DASHBOARD_URL}/#config=${CONFIG_B64}"
 echo "========================================="
 echo ""
 
-# Start localtunnel if available (skip in headless)
-if command -v lt &> /dev/null && [ "$DESKTOP_MODE" != "headless" ]; then
+# Start localtunnel only if explicitly enabled via ENABLE_TUNNEL=true
+if [ "$ENABLE_TUNNEL" = "true" ] && command -v lt &> /dev/null && [ "$DESKTOP_MODE" != "headless" ]; then
+  echo ""
+  echo "  Tunnel enabled — creating public URLs for this container."
+  echo "  The VNC desktop is password-protected (password: $VNC_PASSWORD)."
+  echo ""
   echo "Starting localtunnel..."
 
   # Tunnel for tool API
@@ -114,13 +139,10 @@ if command -v lt &> /dev/null && [ "$DESKTOP_MODE" != "headless" ]; then
       TOOL_URL=$(echo "$line" | grep -oP 'https://[^ ]+')
       echo ""
       echo "========================================="
-      echo "  Public access (localtunnel)"
+      echo "  Remote access (localtunnel)"
       echo "========================================="
       echo "  Tool API : $TOOL_URL"
       echo "========================================="
-      echo ""
-      echo "  Use this URL as the API host when"
-      echo "  adding a session in the compeek UI."
       echo ""
     fi
   done &
@@ -133,9 +155,7 @@ if command -v lt &> /dev/null && [ "$DESKTOP_MODE" != "headless" ]; then
     fi
   done &
 elif [ "$DESKTOP_MODE" = "headless" ]; then
-  echo "Headless mode — VNC and localtunnel skipped."
-else
-  echo "localtunnel not installed. For public access: npm i -g localtunnel"
+  echo "Headless mode — VNC skipped."
 fi
 
 # Wait for tool server

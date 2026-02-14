@@ -30,7 +30,7 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 
 **Multi-session** — the frontend manages multiple container connections via tabs. Each session has its own health-check polling and independent agent loop. Session configs persist in localStorage.
 
-**Docker** (`docker/Dockerfile`, `docker-compose.yml`) — Ubuntu 22.04 containers with Xvfb (1024x768), Mutter, x11vnc, noVNC, Firefox. Published to `ghcr.io/uburuntu/compeek`. Localtunnel auto-starts for public access. Ports per container: 3000 (tool API), 6080 (noVNC), 5900 (VNC).
+**Docker** (`docker/Dockerfile`, `docker-compose.yml`) — Ubuntu 24.04 containers with Xvfb (1280x720), Mutter, x11vnc, noVNC, Firefox (with uBlock Origin). Published to `ghcr.io/uburuntu/compeek`. Ports per container: 3000 (tool API), 6080 (noVNC), 5900 (VNC). Localtunnel available via `ENABLE_TUNNEL=true`.
 
 **Desktop modes** — controlled by `DESKTOP_MODE` env var in `docker/entrypoint.sh`:
 - `full` (default) — Xvfb + Mutter + Tint2 + Firefox + target app

@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import emptyDesktopImg from '../assets/empty-desktop.png';
+import Tooltip from './Tooltip';
 
 interface Props {
   screenshot: string | null;
@@ -29,8 +30,8 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
     // Clear previous overlay
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const scaleX = canvas.width / 1024;
-    const scaleY = canvas.height / 768;
+    const scaleX = canvas.width / 1280;
+    const scaleY = canvas.height / 720;
 
     // Draw action indicator
     if (action.params?.coordinate) {
@@ -122,20 +123,24 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
         <div className="ml-auto flex items-center gap-2">
           {!isVncOnly && (
             <>
-              <button
-                onClick={() => setOverlayVisible(!overlayVisible)}
-                className={`text-xs px-2 py-1 rounded transition-colors ${
-                  overlayVisible ? 'bg-compeek-accent/20 text-compeek-accent' : 'text-compeek-text-dim hover:text-compeek-text'
-                }`}
-              >
-                Overlay {overlayVisible ? 'ON' : 'OFF'}
-              </button>
-              <button
-                onClick={() => setUseVnc(!useVnc)}
-                className="text-xs text-compeek-text-dim hover:text-compeek-text px-2 py-1 rounded"
-              >
-                {useVnc ? 'VNC' : 'Screenshots'}
-              </button>
+              <Tooltip content="Show or hide the AI's click targets on the desktop">
+                <button
+                  onClick={() => setOverlayVisible(!overlayVisible)}
+                  className={`text-xs px-2 py-1 rounded transition-colors ${
+                    overlayVisible ? 'bg-compeek-accent/20 text-compeek-accent' : 'text-compeek-text-dim hover:text-compeek-text'
+                  }`}
+                >
+                  Overlay {overlayVisible ? 'ON' : 'OFF'}
+                </button>
+              </Tooltip>
+              <Tooltip content="Switch between live desktop view and screenshot snapshots">
+                <button
+                  onClick={() => setUseVnc(!useVnc)}
+                  className="text-xs text-compeek-text-dim hover:text-compeek-text px-2 py-1 rounded"
+                >
+                  {useVnc ? 'VNC' : 'Screenshots'}
+                </button>
+              </Tooltip>
             </>
           )}
         </div>

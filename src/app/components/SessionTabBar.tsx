@@ -1,4 +1,5 @@
 import type { SessionConfig, SessionStatus } from '../types/session';
+import Tooltip from './Tooltip';
 
 interface Props {
   sessions: SessionConfig[];
@@ -8,6 +9,12 @@ interface Props {
   onClose: (id: string) => void;
   onAdd: () => void;
 }
+
+const statusLabels: Record<SessionStatus, string> = {
+  connected: 'Connected',
+  reconnecting: 'Reconnecting...',
+  disconnected: 'Disconnected',
+};
 
 const statusColors: Record<SessionStatus, string> = {
   connected: 'bg-compeek-success',
@@ -32,10 +39,14 @@ export default function SessionTabBar({ sessions, activeSessionId, sessionStatus
                 : 'text-compeek-text-dim hover:text-compeek-text hover:bg-compeek-surface/50'
             }`}
           >
-            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColors[status]}`} />
+            <Tooltip content={statusLabels[status]} position="bottom">
+              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColors[status]}`} />
+            </Tooltip>
             <span>{session.name}</span>
             {session.type === 'vnc-only' && (
-              <span className="text-[9px] text-compeek-text-dim opacity-60">VNC</span>
+              <Tooltip content="View-only mode — no AI agent" position="bottom">
+                <span className="text-[9px] text-compeek-text-dim opacity-60 cursor-help">VNC</span>
+              </Tooltip>
             )}
             {sessions.length > 1 && (
               <span
@@ -49,13 +60,14 @@ export default function SessionTabBar({ sessions, activeSessionId, sessionStatus
         );
       })}
 
-      <button
-        onClick={onAdd}
-        className="flex items-center justify-center w-8 h-full text-compeek-text-dim hover:text-compeek-text hover:bg-compeek-surface/50 transition-colors text-sm shrink-0"
-        title="Add session"
-      >
-        +
-      </button>
+      <Tooltip content="Connect to another desktop" position="bottom">
+        <button
+          onClick={onAdd}
+          className="flex items-center justify-center w-8 h-full text-compeek-text-dim hover:text-compeek-text hover:bg-compeek-surface/50 transition-colors text-sm shrink-0"
+        >
+          +
+        </button>
+      </Tooltip>
     </div>
   );
 }

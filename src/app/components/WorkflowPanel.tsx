@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { extractDocument } from '../agent/loop';
+import Tooltip from './Tooltip';
 
 interface Props {
   isRunning: boolean;
@@ -20,9 +21,9 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
   const [model, setModel] = useState(initialModel || 'claude-sonnet-4-5');
 
   const models = [
-    { id: 'claude-haiku-4-5', label: 'Haiku 4.5' },
-    { id: 'claude-sonnet-4-5', label: 'Sonnet 4.5' },
-    { id: 'claude-opus-4-6', label: 'Opus 4.6' },
+    { id: 'claude-haiku-4-5', label: 'Haiku 4.5', tip: 'Fastest and cheapest. Good for simple, quick tasks.' },
+    { id: 'claude-sonnet-4-5', label: 'Sonnet 4.5', tip: 'Best balance of speed and quality. Recommended for most tasks.' },
+    { id: 'claude-opus-4-6', label: 'Opus 4.6', tip: 'Most powerful. Best for complex multi-step workflows.' },
   ];
 
   const handleDocumentUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,50 +65,57 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
   };
 
   const presetGoals = [
-    { label: 'QA: Form Validation', goal: `You are a QA tester. Test the form at http://localhost:8080 for proper validation behavior.\n\nTEST 1 — Empty submission:\n1. Navigate to http://localhost:8080 in Firefox\n2. Without filling any fields, click the "Submit Application" button\n3. Take a screenshot to capture the error states\n4. Verify that error messages appear for required fields\n\nTEST 2 — Successful submission:\n1. Reload the page (Ctrl+Shift+R)\n2. Fill ALL required fields with valid data (First Name: QA, Last Name: Tester, DOB: 01/15/1990, etc.)\n3. Check the consent checkbox and click Submit\n4. Take a screenshot and verify success\n\nAfter all tests, provide a summary of which tests passed and which failed.` },
-    { label: 'QA: Special Characters', goal: `Test data integrity of the form at http://localhost:8080.\n\n1. Navigate to http://localhost:8080\n2. Fill the form with special characters: First Name: O'Brien, Last Name: García-López, Address: 42 Rue de l'Église\n3. Fill remaining required fields, check consent, submit\n4. Zoom into the success page values and verify special characters are preserved correctly.` },
-    { label: 'Open text editor', goal: 'Open the text editor (mousepad or gedit), create a new file, and type "Hello from compeek!"' },
-    { label: 'Browse web', goal: 'Open Firefox, navigate to example.com, and take a screenshot of the page' },
+    { label: 'Test a form', goal: `You are a QA tester. Test the form at http://localhost:8080 for proper validation behavior.\n\nTEST 1 — Empty submission:\n1. Navigate to http://localhost:8080 in Firefox\n2. Without filling any fields, click the "Submit Application" button\n3. Take a screenshot to capture the error states\n4. Verify that error messages appear for required fields\n\nTEST 2 — Successful submission:\n1. Reload the page (Ctrl+Shift+R)\n2. Fill ALL required fields with valid data (First Name: QA, Last Name: Tester, DOB: 01/15/1990, etc.)\n3. Check the consent checkbox and click Submit\n4. Take a screenshot and verify success\n\nAfter all tests, provide a summary of which tests passed and which failed.` },
+    { label: 'Test special characters', goal: `Test data integrity of the form at http://localhost:8080.\n\n1. Navigate to http://localhost:8080\n2. Fill the form with special characters: First Name: O'Brien, Last Name: García-López, Address: 42 Rue de l'Église\n3. Fill remaining required fields, check consent, submit\n4. Zoom into the success page values and verify special characters are preserved correctly.` },
+    { label: 'Open a text editor', goal: 'Open the text editor (mousepad or gedit), create a new file, and type "Hello from compeek!"' },
+    { label: 'Browse the web', goal: 'Open Firefox, navigate to example.com, and take a screenshot of the page' },
   ];
 
   return (
     <div className="p-3 border-b border-compeek-border space-y-3 shrink-0">
       {/* Mode selector */}
       <div className="flex gap-1 bg-compeek-bg rounded-lg p-0.5">
-        <button
-          onClick={() => setMode('general')}
-          className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
-            mode === 'general' ? 'bg-compeek-accent text-white' : 'text-compeek-text-dim hover:text-compeek-text'
-          }`}
-        >
-          General Goal
-        </button>
-        <button
-          onClick={() => setMode('document')}
-          className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
-            mode === 'document' ? 'bg-compeek-accent text-white' : 'text-compeek-text-dim hover:text-compeek-text'
-          }`}
-        >
-          Document → Form
-        </button>
+        <Tooltip content="Tell the AI what to do in plain language">
+          <button
+            onClick={() => setMode('general')}
+            className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
+              mode === 'general' ? 'bg-compeek-accent text-white' : 'text-compeek-text-dim hover:text-compeek-text'
+            }`}
+          >
+            General Goal
+          </button>
+        </Tooltip>
+        <Tooltip content="Upload a photo of a document, and the AI will fill a form with the extracted data">
+          <button
+            onClick={() => setMode('document')}
+            className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
+              mode === 'document' ? 'bg-compeek-accent text-white' : 'text-compeek-text-dim hover:text-compeek-text'
+            }`}
+          >
+            Document &rarr; Form
+          </button>
+        </Tooltip>
       </div>
 
       {/* Model selector */}
       <div className="flex items-center gap-2">
-        <span className="text-[10px] text-compeek-text-dim font-medium uppercase tracking-wider">Model</span>
+        <Tooltip content="Which AI model to use for this task">
+          <span className="text-[10px] text-compeek-text-dim font-medium uppercase tracking-wider cursor-help">Model</span>
+        </Tooltip>
         <div className="flex gap-1 flex-1 bg-compeek-bg rounded-lg p-0.5">
           {models.map(m => (
-            <button
-              key={m.id}
-              onClick={() => setModel(m.id)}
-              className={`flex-1 text-xs py-1 rounded-md transition-colors font-medium ${
-                model === m.id
-                  ? 'bg-compeek-accent/20 text-compeek-accent border border-compeek-accent/40'
-                  : 'text-compeek-text-dim hover:text-compeek-text border border-transparent'
-              }`}
-            >
-              {m.label}
-            </button>
+            <Tooltip key={m.id} content={m.tip}>
+              <button
+                onClick={() => setModel(m.id)}
+                className={`flex-1 text-xs py-1 rounded-md transition-colors font-medium ${
+                  model === m.id
+                    ? 'bg-compeek-accent/20 text-compeek-accent border border-compeek-accent/40'
+                    : 'text-compeek-text-dim hover:text-compeek-text border border-transparent'
+                }`}
+              >
+                {m.label}
+              </button>
+            </Tooltip>
           ))}
         </div>
       </div>
@@ -166,7 +174,7 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
         <textarea
           value={goal}
           onChange={e => setGoal(e.target.value)}
-          placeholder={mode === 'document' ? 'Goal will be auto-filled after extraction...' : 'Describe what the agent should do...'}
+          placeholder={mode === 'document' ? 'Goal will be auto-filled after extraction...' : "Tell the AI what to do, e.g. 'Fill out the form with my name and address'"}
           rows={3}
           className="w-full bg-compeek-bg border border-compeek-border rounded-lg p-2 text-sm resize-none focus:border-compeek-accent outline-none"
         />
@@ -176,13 +184,14 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
       {mode === 'general' && (
         <div className="flex flex-wrap gap-1">
           {presetGoals.map(p => (
-            <button
-              key={p.label}
-              onClick={() => setGoal(p.goal)}
-              className="text-[10px] px-2 py-1 rounded-full bg-compeek-bg border border-compeek-border text-compeek-text-dim hover:text-compeek-text hover:border-compeek-accent/50 transition-colors"
-            >
-              {p.label}
-            </button>
+            <Tooltip key={p.label} content="Click to use this pre-written task" position="bottom">
+              <button
+                onClick={() => setGoal(p.goal)}
+                className="text-[10px] px-2 py-1 rounded-full bg-compeek-bg border border-compeek-border text-compeek-text-dim hover:text-compeek-text hover:border-compeek-accent/50 transition-colors"
+              >
+                {p.label}
+              </button>
+            </Tooltip>
           ))}
         </div>
       )}
@@ -195,6 +204,15 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
         >
           Stop Agent
         </button>
+      ) : !apiKey ? (
+        <Tooltip content="Set your API key in Settings first">
+          <button
+            disabled
+            className="w-full py-2.5 rounded-lg bg-compeek-accent/30 text-compeek-text-dim font-medium text-sm cursor-not-allowed"
+          >
+            Set API key to start
+          </button>
+        </Tooltip>
       ) : (
         <button
           onClick={handleStart}

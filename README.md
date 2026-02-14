@@ -1,57 +1,81 @@
 # compeek — AI Eyes & Hands for Any Desktop
 
-> A computer use agent framework powered by Claude. Define goals in natural language, point at any software, watch the agent work.
+> Tell the AI what to do. Point it at any software. Watch it work.
+>
+> No APIs. No plugins. No integrations. Just screen and keyboard.
 
-**No APIs. No plugins. No integrations. Just screen and keyboard.**
-
-[Dashboard](https://compeek.rmbk.me) | [Docker Image](https://ghcr.io/uburuntu/compeek) | [npm](https://www.npmjs.com/package/@rmbk/compeek)
+[Try the Dashboard](https://compeek.rmbk.me) | [Docker Image](https://ghcr.io/uburuntu/compeek) | [npm](https://www.npmjs.com/package/@rmbk/compeek)
 
 ![compeek — AI agent controlling a Linux desktop](docs/hero.png)
 
+## What can it do?
+
+**compeek** (компик + peek) turns Claude into a desktop agent that can use any application — just like a person sitting at a computer.
+
+- **See** any application through screenshots
+- **Think** through complex tasks step by step (you can watch it reason)
+- **Act** with mouse clicks, keyboard typing, and scrolling
+- **Read** documents like passports, IDs, and invoices
+- **Validate** its own work by checking what it filled in
+- **Show you everything** — a real-time dashboard shows what the AI sees and thinks
+
 ## Quick Start
 
+### Option 1: One command (recommended)
+
 ```bash
-# One-line install (Linux/macOS/WSL2)
-curl -fsSL https://compeek.rmbk.me/install.sh | bash
-
-# Or via npx
 npx @rmbk/compeek start --open
+```
 
-# Or docker directly
+This downloads a virtual desktop, starts it, and opens the dashboard in your browser.
+
+### Option 2: Install script
+
+```bash
+curl -fsSL https://compeek.rmbk.me/install.sh | bash
+```
+
+### Option 3: Docker
+
+```bash
 docker run -d -p 3001:3000 -p 6081:6080 --shm-size=512m ghcr.io/uburuntu/compeek
 ```
 
-The container prints a **connection string** and a **clickable dashboard link** — no manual port entry needed. Check `docker logs compeek-1`.
+After starting, check the terminal for a **clickable link** that connects the dashboard automatically. Or run `docker logs compeek-1` to see it.
 
 Open the [dashboard](https://compeek.rmbk.me), paste your Anthropic API key in Settings, and start a workflow.
 
-## What is compeek?
-
-**compeek** (компик + peek) turns Claude into an autonomous desktop agent. It sees any application through screenshots, interacts via mouse and keyboard, and validates its own work — all without requiring any integration with the target software.
-
-- **See** — screenshot any application + zoom into details
-- **Think** — extended thinking for transparent reasoning
-- **Act** — mouse clicks, keyboard input, scrolling
-- **Read** — extract data from document photos (passports, IDs, invoices)
-- **Validate** — self-check by comparing filled forms against expected data
-- **Observe** — real-time dashboard showing what the AI sees and thinks
-
-## Architecture
+## How It Works
 
 ![Architecture: browser-native agent loop communicates with Docker containers via HTTP](docs/architecture.png)
 
-The agent loop runs **in the browser** — it calls the Anthropic API directly and sends mouse/keyboard commands to Docker containers via HTTP. Each container is a stateless virtual desktop with a lightweight tool server. No backend needed.
+The AI runs **in your browser** — it looks at the virtual desktop, decides what to do, and sends mouse/keyboard commands. The virtual desktop is just a Linux computer in a container — no AI runs inside it.
+
+<details>
+<summary>Technical architecture details</summary>
+
+The agent loop runs in the browser via `@anthropic-ai/sdk` with `dangerouslyAllowBrowser: true`.
+It uses `computer_20250124`, `bash_20250124`, and `text_editor_20250728` tools.
+Extended thinking is enabled with a 10240 token budget.
+
+Each container runs Ubuntu 24.04 with Xvfb (1280x720), Mutter, x11vnc, noVNC, and Firefox (with uBlock Origin).
+The container exposes a minimal Express tool server with endpoints:
+`GET /api/health`, `GET /api/info`, `POST /api/tool`, `POST /api/bash`.
+
+Communication is HTTP-only. No WebSocket, no state in containers.
+
+</details>
 
 ## Desktop Modes
 
 Set `DESKTOP_MODE` when starting a container:
 
-| Mode | What starts | Use case |
+| Mode | What you get | Best for |
 |------|-------------|----------|
-| `full` (default) | Xvfb + Mutter + Tint2 + Firefox + target app | QA testing with pre-loaded app |
-| `browser` | Xvfb + Mutter + Firefox | General web browsing agent |
-| `minimal` | Xvfb + Mutter only | Agent launches everything itself |
-| `headless` | Xvfb + tool server only | API-only, bash commands only |
+| `full` (default) | Desktop + browser + sample app | Testing forms and web apps |
+| `browser` | Desktop + browser | General web browsing |
+| `minimal` | Desktop only | Let the AI install what it needs |
+| `headless` | No visual — commands only | Automated scripts |
 
 ```bash
 npx @rmbk/compeek start --mode browser
@@ -59,9 +83,9 @@ npx @rmbk/compeek start --mode browser
 docker run -d -e DESKTOP_MODE=browser -p 3001:3000 -p 6081:6080 --shm-size=512m ghcr.io/uburuntu/compeek
 ```
 
-## Connection Strings
+## Connecting to a Desktop
 
-Containers print a base64-encoded config and a dashboard link on startup:
+The container prints a **connection code** and a **clickable link** when it starts:
 
 ```
 Connection string: eyJuYW1lIj...
@@ -69,9 +93,9 @@ Dashboard link:    https://compeek.rmbk.me/#config=eyJuYW1lIj...
 ```
 
 Three ways to connect:
-1. **Click the link** — auto-adds the session
-2. **Paste the string** in the Add Session dialog
-3. **Manual entry** — type host and ports
+1. **Click the link** in your terminal — auto-adds the session
+2. **Paste the code** in the Add Session dialog
+3. **Type the address** manually (host + ports)
 
 ## CLI
 
@@ -85,7 +109,37 @@ npx @rmbk/compeek logs           # Follow container logs
 npx @rmbk/compeek open           # Open dashboard with auto-connect URL
 ```
 
-Flags for `start`: `--name`, `--api-port`, `--vnc-port`, `--mode`, `--no-pull`, `--open`.
+Flags for `start`: `--name`, `--api-port`, `--vnc-port`, `--mode`, `--persist`, `--password`, `--tunnel`, `--no-pull`, `--open`.
+
+| Flag | Description |
+|------|-------------|
+| `--open` | Open dashboard in browser after starting |
+| `--mode <m>` | Desktop mode: `full`, `browser`, `minimal`, `headless` |
+| `--persist` | Mount a named Docker volume so files survive container restarts |
+| `--password <pw>` | Set a custom VNC password (auto-generated if omitted) |
+| `--tunnel` | Create public URLs via localtunnel for remote access |
+
+## Security
+
+Each container auto-generates a **VNC password** on startup. The password is included in the connection link so the dashboard connects seamlessly — you don't need to type it.
+
+You can set your own password with `--password`:
+
+```bash
+npx @rmbk/compeek start --password mysecret
+```
+
+### Remote access
+
+If you're running compeek on the same machine as your browser, everything works locally — no tunneling needed.
+
+To access a container from another machine (e.g. a remote server), use `--tunnel` to create public URLs:
+
+```bash
+npx @rmbk/compeek start --tunnel
+```
+
+This uses [localtunnel](https://theboroer.github.io/localtunnel-www/) to make the container reachable over the internet. The VNC desktop is password-protected, but the tool API currently has no authentication — use a VPN or firewall for sensitive environments.
 
 ## Development
 

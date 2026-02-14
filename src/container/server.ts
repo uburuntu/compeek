@@ -41,7 +41,7 @@ app.post('/api/bash', (req, res) => {
     const { command } = req.body;
     const output = execSync(command, {
       encoding: 'utf-8',
-      timeout: 30000,
+      timeout: 120000,
       env: { ...process.env, DISPLAY: process.env.DISPLAY || ':1' },
     });
     res.json({ output: output || '' });

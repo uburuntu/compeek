@@ -1,10 +1,10 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=:1
 ENV DISPLAY_NUM=1
-ENV WIDTH=1024
-ENV HEIGHT=768
+ENV WIDTH=1280
+ENV HEIGHT=720
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -40,6 +40,34 @@ RUN add-apt-repository ppa:mozillateam/ppa -y \
     && apt-get update && apt-get install -y firefox \
     && rm -rf /var/lib/apt/lists/*
 
+# Firefox enterprise policies: uBlock Origin, disable telemetry/updates, clean startup
+RUN mkdir -p /usr/lib/firefox/distribution && cat > /usr/lib/firefox/distribution/policies.json << 'POLICIES'
+{
+  "policies": {
+    "ExtensionSettings": {
+      "uBlock0@raymondhill.net": {
+        "installation_mode": "force_installed",
+        "install_url": "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"
+      }
+    },
+    "DisableAppUpdate": true,
+    "DontCheckDefaultBrowser": true,
+    "DisableTelemetry": true,
+    "DisableFirefoxStudies": true,
+    "DisablePocket": true,
+    "OverrideFirstRunPage": "",
+    "OverridePostUpdatePage": "",
+    "Homepage": { "URL": "about:blank", "Locked": false, "StartPage": "homepage" },
+    "NewTabPage": false,
+    "NoDefaultBookmarks": true,
+    "OfferToSaveLogins": false,
+    "PasswordManagerEnabled": false,
+    "FirefoxSuggest": { "WebSuggestions": false, "SponsoredSuggestions": false, "ImproveSuggest": false },
+    "UserMessaging": { "WhatsNew": false, "ExtensionRecommendations": false, "FeatureRecommendations": false, "UrlbarInterventions": false, "SkipOnboarding": true, "MoreFromMozilla": false, "FirefoxLabs": false }
+  }
+}
+POLICIES
+
 # Install Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
@@ -50,6 +78,7 @@ RUN npm install -g localtunnel
 
 # Create app user
 RUN useradd -m -s /bin/bash compeek
+RUN mkdir -p /home/compeek/data && chown compeek:compeek /home/compeek/data
 WORKDIR /home/compeek/app
 
 # Copy package.json and install dependencies (including dev for build)

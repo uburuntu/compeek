@@ -4,6 +4,7 @@ import SessionView from './components/SessionView';
 import AddSessionDialog from './components/AddSessionDialog';
 import SettingsDialog from './components/SettingsDialog';
 import WelcomeGuide from './components/WelcomeGuide';
+import Tooltip from './components/Tooltip';
 import { useSessionManager } from './hooks/useSessionManager';
 import { useSettings } from './hooks/useSettings';
 import type { SessionStatus } from './types/session';
@@ -41,6 +42,7 @@ export default function App() {
           apiPort: json.apiPort,
           vncHost: json.vncHost,
           vncPort: json.vncPort,
+          ...(json.vncPassword ? { vncPassword: json.vncPassword } : {}),
         });
         history.replaceState(null, '', window.location.pathname + window.location.search);
       }
@@ -62,26 +64,42 @@ export default function App() {
             <img src={logoImg} alt="compeek" className="w-7 h-7" />
           </div>
           <span className="font-semibold text-base tracking-tight">compeek</span>
-          <span className="text-xs text-compeek-text-dim ml-1">AI eyes & hands for any desktop</span>
+          <span className="text-xs text-compeek-text-dim ml-1 hidden sm:inline">AI eyes & hands for any desktop</span>
         </div>
         <div className="ml-auto flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-[10px] text-compeek-text-dim">
-            <span>{connectedCount}/{sessions.length} sessions</span>
-          </div>
+          <Tooltip content="Desktop connections">
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <div className={`w-1.5 h-1.5 rounded-full ${connectedCount > 0 ? 'bg-compeek-success' : 'bg-compeek-text-dim'}`} />
+              <span className="text-compeek-text-dim">
+                {connectedCount > 0 ? `${connectedCount} connected` : 'No desktops'}
+              </span>
+            </div>
+          </Tooltip>
+
+          {/* API key warning */}
+          {!settings.apiKey && (
+            <Tooltip content="You need an API key to use the AI agent. Click to add one.">
+              <button
+                onClick={() => setShowSettings(true)}
+                className="text-[10px] px-2 py-0.5 rounded-full bg-compeek-warning/15 text-compeek-warning border border-compeek-warning/30 hover:bg-compeek-warning/25 transition-colors"
+              >
+                Setup needed
+              </button>
+            </Tooltip>
+          )}
+
           {/* Settings gear */}
-          <button
-            onClick={() => setShowSettings(true)}
-            className="flex items-center gap-1.5 text-compeek-text-dim hover:text-compeek-text transition-colors"
-            title="Settings"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-            {!settings.apiKey && (
-              <span className="text-[9px] text-compeek-warning">No key</span>
-            )}
-          </button>
+          <Tooltip content="Settings">
+            <button
+              onClick={() => setShowSettings(true)}
+              className="flex items-center gap-1.5 text-compeek-text-dim hover:text-compeek-text transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+          </Tooltip>
         </div>
       </header>
 
@@ -101,6 +119,7 @@ export default function App() {
           onAddSession={() => setShowAddDialog(true)}
           onOpenSettings={() => setShowSettings(true)}
           hasApiKey={!!settings.apiKey}
+          hasConnectedSession={connectedCount > 0}
         />
       ) : (
         sessions.map(session => (
