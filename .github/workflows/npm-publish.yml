@@ -21,6 +21,9 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
+      - name: Ensure npm supports trusted publishing
+        run: npm install -g npm@latest
+
       - name: Set version from git tag
         run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
 
@@ -29,4 +32,4 @@ jobs:
       - run: npm test
 
       - name: Publish to npm (OIDC trusted publishing)
-        run: npm publish --provenance --access public
+        run: npm publish --access public
