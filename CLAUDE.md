@@ -30,12 +30,12 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 
 **Multi-session** — the frontend manages multiple container connections via tabs. Each session has its own health-check polling and independent agent loop. Session configs persist in localStorage.
 
-**Docker** (`docker/Dockerfile`, `docker-compose.yml`) — Ubuntu 24.04 containers with Xvfb (1280x720), Mutter, x11vnc, noVNC, Firefox (with uBlock Origin). Published to `ghcr.io/uburuntu/compeek`. Ports per container: 3000 (tool API), 6080 (noVNC), 5900 (VNC). Localtunnel available via `ENABLE_TUNNEL=true`.
+**Docker** (`docker/Dockerfile`, `docker-compose.yml`) — Ubuntu 24.04 containers with Xvfb (1280x720), XFWM4, x11vnc, noVNC, Firefox (with uBlock Origin). Published to `ghcr.io/uburuntu/compeek`. Ports per container: 3000 (tool API), 6080 (noVNC), 5900 (VNC). Localtunnel available via `ENABLE_TUNNEL=true`.
 
 **Desktop modes** — controlled by `DESKTOP_MODE` env var in `docker/entrypoint.sh`:
-- `full` (default) — Xvfb + Mutter + Tint2 + Firefox + target app
-- `browser` — Xvfb + Mutter + Firefox (no target app, no panel)
-- `minimal` — Xvfb + Mutter only (no browser, no panel)
+- `full` (default) — Xvfb + XFWM4 + Tint2 + Firefox + target app
+- `browser` — Xvfb + XFWM4 + Firefox (no target app, no panel)
+- `minimal` — Xvfb + XFWM4 only (no browser, no panel)
 - `headless` — Xvfb + tool server only (no WM, no VNC)
 
 **Connection strings** — containers print a base64-encoded session config and a clickable dashboard URL on startup. The dashboard reads `#config=<base64>` from the URL hash to auto-add sessions. The Add Session dialog also accepts pasted connection strings.

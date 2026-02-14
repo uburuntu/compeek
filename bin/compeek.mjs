@@ -13,6 +13,22 @@ const DASHBOARD_URL = 'https://compeek.rmbk.me';
 const HEALTH_TIMEOUT = 30_000;
 const HEALTH_INTERVAL = 1_000;
 
+// ── ANSI Colors ──────────────────────────────────────────
+
+const isColorSupported = process.stdout.isTTY && !process.env.NO_COLOR;
+const c = isColorSupported ? {
+  reset:   '\x1b[0m',
+  bold:    '\x1b[1m',
+  dim:     '\x1b[2m',
+  cyan:    '\x1b[36m',
+  green:   '\x1b[32m',
+  yellow:  '\x1b[33m',
+  red:     '\x1b[31m',
+  magenta: '\x1b[35m',
+  white:   '\x1b[97m',
+  gray:    '\x1b[90m',
+} : { reset: '', bold: '', dim: '', cyan: '', green: '', yellow: '', red: '', magenta: '', white: '', gray: '' };
+
 // ── Helpers ──────────────────────────────────────────────
 
 function run(cmd, opts = {}) {
@@ -71,6 +87,19 @@ function findNextName() {
 }
 
 function waitForHealth(host, port, timeout) {
+  const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  let frame = 0;
+  let spinner;
+
+  if (isColorSupported) {
+    spinner = setInterval(() => {
+      process.stdout.write(`\r  ${c.cyan}${frames[frame]}${c.reset} Waiting for container...`);
+      frame = (frame + 1) % frames.length;
+    }, 80);
+  } else {
+    console.log('  Waiting for container...');
+  }
+
   return new Promise((resolve, reject) => {
     const start = Date.now();
     const check = () => {
@@ -80,7 +109,13 @@ function waitForHealth(host, port, timeout) {
         res.on('end', () => {
           try {
             const data = JSON.parse(body);
-            if (data.status === 'ok') return resolve(data);
+            if (data.status === 'ok') {
+              if (spinner) {
+                clearInterval(spinner);
+                process.stdout.write(`\r  ${c.green}✓${c.reset} Container ready            \n`);
+              }
+              return resolve(data);
+            }
           } catch { /* retry */ }
           retry();
         });
@@ -89,7 +124,13 @@ function waitForHealth(host, port, timeout) {
       req.on('timeout', () => { req.destroy(); retry(); });
     };
     const retry = () => {
-      if (Date.now() - start > timeout) return reject(new Error('Health check timed out'));
+      if (Date.now() - start > timeout) {
+        if (spinner) {
+          clearInterval(spinner);
+          process.stdout.write(`\r  ${c.red}✗${c.reset} Health check timed out      \n`);
+        }
+        return reject(new Error('Health check timed out'));
+      }
       setTimeout(check, HEALTH_INTERVAL);
     };
     check();
@@ -117,7 +158,7 @@ function openUrl(url) {
 
 async function cmdStart(args) {
   if (!hasDocker()) {
-    console.error('Docker is not available. Install Docker first: https://docs.docker.com/get-docker/');
+    console.error(`${c.red}Docker is not available.${c.reset} Install Docker first: https://docs.docker.com/get-docker/`);
     process.exit(1);
   }
 
@@ -130,16 +171,29 @@ async function cmdStart(args) {
   const vncPassword = flags.password || crypto.randomBytes(6).toString('base64url').slice(0, 8);
   const sessionName = name.replace(CONTAINER_PREFIX, '').replace(/^(\d+)$/, 'Desktop $1');
 
+  console.log('');
+  console.log(`  ${c.bold}${c.cyan}compeek${c.reset}`);
+  console.log('');
+
   if (!flags['no-pull']) {
-    console.log(`Pulling ${IMAGE}...`);
+    console.log(`  ${c.dim}Pulling image...${c.reset}`);
     try {
       run(`docker pull ${IMAGE}`, { stdio: 'inherit' });
     } catch {
-      console.log('Pull failed, using cached image if available.');
+      console.log(`  ${c.yellow}Pull failed, using cached image.${c.reset}`);
     }
+    console.log('');
   }
 
-  console.log(`Starting ${name} (api:${apiPort}, vnc:${vncPort}, mode:${mode}${flags.persist ? ', persist:on' : ''})...`);
+  const info = [
+    `mode:${c.white}${mode}${c.reset}`,
+    `api:${c.white}${apiPort}${c.reset}`,
+    `vnc:${c.white}${vncPort}${c.reset}`,
+  ];
+  if (flags.persist) info.push(`${c.green}persist${c.reset}`);
+  if (flags.tunnel)  info.push(`${c.yellow}tunnel${c.reset}`);
+
+  console.log(`  ${c.cyan}▸${c.reset} Starting ${c.bold}${name}${c.reset}  ${c.dim}${info.join(' · ')}${c.reset}`);
 
   // Remove existing container with same name if stopped
   run(`docker rm -f ${name}`, { allowFail: true });
@@ -160,37 +214,32 @@ async function cmdStart(args) {
     IMAGE,
   ].filter(Boolean).join(' '));
 
-  console.log('Waiting for container to be ready...');
-
   try {
     await waitForHealth('localhost', apiPort, HEALTH_TIMEOUT);
-    console.log('Container is ready.');
   } catch {
-    console.error('Container did not become healthy. Check logs: npx compeek logs');
+    console.error(`\n  ${c.red}Container did not start.${c.reset} Check logs: npx compeek logs`);
     process.exit(1);
   }
 
   const connStr = buildConnectionString(sessionName, 'localhost', apiPort, 'localhost', vncPort, vncPassword);
+  const dashboardLink = `${DASHBOARD_URL}/#config=${connStr}`;
 
   console.log('');
-  console.log('=========================================');
-  console.log(`  ${name}`);
-  console.log('=========================================');
-  console.log(`  Tool API : http://localhost:${apiPort}`);
+  console.log(`  ${c.dim}──── Links ─────────────────────────────────────${c.reset}`);
+  console.log('');
+  console.log(`  ${c.bold}Dashboard${c.reset}   ${c.cyan}${dashboardLink}${c.reset}`);
+  console.log(`  ${c.dim}Tool API${c.reset}    http://localhost:${apiPort}`);
   if (mode !== 'headless') {
-    console.log(`  noVNC    : http://localhost:${vncPort}`);
-    console.log(`  VNC pass : ${vncPassword}`);
+    console.log(`  ${c.dim}noVNC${c.reset}       http://localhost:${vncPort}`);
+    console.log(`  ${c.dim}Password${c.reset}    ${vncPassword}`);
   }
   console.log('');
-  console.log('  Connection string:');
-  console.log(`  ${connStr}`);
+  console.log(`  ${c.dim}──── Connection string ──────────────────────────${c.reset}`);
+  console.log(`  ${c.dim}${connStr}${c.reset}`);
   console.log('');
-  console.log('  Dashboard link:');
-  console.log(`  ${DASHBOARD_URL}/#config=${connStr}`);
-  console.log('=========================================');
 
   if (flags.open) {
-    openUrl(`${DASHBOARD_URL}/#config=${connStr}`);
+    openUrl(dashboardLink);
   }
 }
 
@@ -198,33 +247,41 @@ function cmdStop(args) {
   const target = args[0];
   if (target) {
     const name = target.startsWith(CONTAINER_PREFIX) ? target : `${CONTAINER_PREFIX}${target}`;
-    console.log(`Stopping ${name}...`);
+    console.log(`  ${c.cyan}▸${c.reset} Stopping ${c.bold}${name}${c.reset}...`);
     run(`docker rm -f ${name}`, { allowFail: true, stdio: 'inherit' });
+    console.log(`  ${c.green}✓${c.reset} Stopped`);
   } else {
     const containers = listContainers();
     if (containers.length === 0) {
-      console.log('No compeek containers running.');
+      console.log(`  ${c.dim}No compeek containers running.${c.reset}`);
       return;
     }
-    for (const c of containers) {
-      console.log(`Stopping ${c.name}...`);
-      run(`docker rm -f ${c.name}`, { allowFail: true });
+    for (const ctr of containers) {
+      console.log(`  ${c.cyan}▸${c.reset} Stopping ${c.bold}${ctr.name}${c.reset}...`);
+      run(`docker rm -f ${ctr.name}`, { allowFail: true });
     }
-    console.log(`Stopped ${containers.length} container(s).`);
+    console.log(`  ${c.green}✓${c.reset} Stopped ${containers.length} container(s)`);
   }
 }
 
 function cmdStatus() {
   const containers = listContainers();
   if (containers.length === 0) {
-    console.log('No compeek containers found.');
+    console.log(`  ${c.dim}No compeek containers found.${c.reset}`);
     return;
   }
-  console.log('NAME\t\t\tSTATUS\t\t\t\tPORTS');
-  console.log('─'.repeat(80));
-  for (const c of containers) {
-    console.log(`${c.name}\t\t${c.status}\t\t${c.ports}`);
+  console.log('');
+  for (const ctr of containers) {
+    const isUp = ctr.status.startsWith('Up');
+    const dot = isUp ? `${c.green}●${c.reset}` : `${c.red}●${c.reset}`;
+    const statusText = isUp ? `${c.green}${ctr.status}${c.reset}` : `${c.dim}${ctr.status}${c.reset}`;
+    console.log(`  ${dot} ${c.bold}${ctr.name}${c.reset}  ${statusText}`);
+    if (ctr.ports) {
+      const portList = ctr.ports.replace(/0\.0\.0\.0:/g, ':').replace(/:::(\d+)/g, ':$1');
+      console.log(`    ${c.dim}${portList}${c.reset}`);
+    }
   }
+  console.log('');
 }
 
 function cmdLogs(args) {
@@ -325,27 +382,27 @@ switch (command) {
   case '-h':
   case 'help':
     console.log(`
-compeek — AI desktop agent
+  ${c.bold}${c.cyan}compeek${c.reset} ${c.dim}— AI eyes & hands for any desktop${c.reset}
 
-Usage: npx compeek [command] [options]
+  ${c.bold}Usage${c.reset}   npx @rmbk/compeek ${c.dim}[command] [options]${c.reset}
 
-Commands:
-  start       Start a new container (default)
-  stop [name] Stop one or all compeek containers
-  status      List running containers
-  logs [name] Follow container logs
-  open [name] Open dashboard with auto-connect URL
+  ${c.bold}Commands${c.reset}
+    start ${c.dim}............${c.reset} Start a new virtual desktop ${c.dim}(default)${c.reset}
+    stop  ${c.dim}[name]${c.reset} ${c.dim}....${c.reset} Stop one or all containers
+    status ${c.dim}...........${c.reset} List running containers
+    logs  ${c.dim}[name]${c.reset} ${c.dim}....${c.reset} Follow container logs
+    open  ${c.dim}[name]${c.reset} ${c.dim}....${c.reset} Open dashboard in browser
 
-Start options:
-  --name <n>       Container name (default: compeek-N)
-  --api-port <p>   Host port for tool API (default: auto)
-  --vnc-port <p>   Host port for noVNC (default: auto)
-  --mode <m>       Desktop mode: full|browser|minimal|headless
-  --persist        Mount a named volume for persistent data
-  --password <pw>  Set a custom VNC password (auto-generated if omitted)
-  --tunnel         Enable localtunnel for remote access
-  --no-pull        Skip docker pull
-  --open           Open dashboard after start
+  ${c.bold}Options${c.reset}
+    --open ${c.dim}..........${c.reset} Open dashboard after start
+    --mode ${c.dim}<m>${c.reset} ${c.dim}......${c.reset} full ${c.dim}|${c.reset} browser ${c.dim}|${c.reset} minimal ${c.dim}|${c.reset} headless
+    --persist ${c.dim}.......${c.reset} Mount volume for persistent data
+    --password ${c.dim}<pw>${c.reset} ${c.dim}.${c.reset} Custom VNC password ${c.dim}(auto-generated if omitted)${c.reset}
+    --tunnel ${c.dim}........${c.reset} Enable localtunnel for remote access
+    --no-pull ${c.dim}.......${c.reset} Skip pulling latest Docker image
+    --name ${c.dim}<n>${c.reset} ${c.dim}......${c.reset} Custom container name
+    --api-port ${c.dim}<p>${c.reset} ${c.dim}.${c.reset} Host port for tool API
+    --vnc-port ${c.dim}<p>${c.reset} ${c.dim}.${c.reset} Host port for noVNC
 `);
     break;
   default:

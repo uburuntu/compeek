@@ -58,7 +58,7 @@ The agent loop runs in the browser via `@anthropic-ai/sdk` with `dangerouslyAllo
 It uses `computer_20250124`, `bash_20250124`, and `text_editor_20250728` tools.
 Extended thinking is enabled with a 10240 token budget.
 
-Each container runs Ubuntu 24.04 with Xvfb (1280x720), Mutter, x11vnc, noVNC, and Firefox (with uBlock Origin).
+Each container runs Ubuntu 24.04 with Xvfb (1280x720), XFWM4, x11vnc, noVNC, and Firefox (with uBlock Origin).
 The container exposes a minimal Express tool server with endpoints:
 `GET /api/health`, `GET /api/info`, `POST /api/tool`, `POST /api/bash`.
 

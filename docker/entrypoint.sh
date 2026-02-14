@@ -3,6 +3,7 @@ set -e
 
 DESKTOP_MODE="${DESKTOP_MODE:-full}"
 DASHBOARD_URL="${DASHBOARD_URL:-https://compeek.rmbk.me}"
+export GTK_THEME=Adwaita:dark
 
 # Auto-generate VNC password if not provided
 if [ -z "$VNC_PASSWORD" ]; then
@@ -27,10 +28,15 @@ STEP=$((STEP + 1))
 
 # 2. Start window manager (skip in headless)
 if [ "$DESKTOP_MODE" != "headless" ]; then
-  echo "[${STEP}] Starting Mutter..."
-  DISPLAY=:1 mutter --replace --sm-disable &
+  echo "[${STEP}] Starting XFWM4..."
+  DISPLAY=:1 GTK_THEME=Adwaita:dark xfwm4 --daemon &
   sleep 1
   STEP=$((STEP + 1))
+
+  # Set wallpaper
+  if [ -f /home/compeek/wallpaper.png ]; then
+    DISPLAY=:1 feh --bg-fill /home/compeek/wallpaper.png &
+  fi
 fi
 
 # 3. Start panel (full mode only)
@@ -54,7 +60,7 @@ if [ "$DESKTOP_MODE" != "headless" ]; then
   STEP=$((STEP + 1))
 
   echo "[${STEP}] Starting noVNC on port 6080..."
-  websockify --web /usr/share/novnc 6080 localhost:5900 &
+  websockify --web /opt/novnc 6080 localhost:5900 &
   sleep 0.5
   STEP=$((STEP + 1))
 fi
@@ -69,30 +75,30 @@ if mountpoint -q /home/compeek/data 2>/dev/null; then
   STEP=$((STEP + 1))
 fi
 
-# 6. Start target app + Firefox (full mode only)
-if [ "$DESKTOP_MODE" = "full" ]; then
-  if [ -d /home/compeek/target-app ]; then
+# 6. Start target app + Firefox
+if [ "$DESKTOP_MODE" = "full" ] || [ "$DESKTOP_MODE" = "browser" ]; then
+  # Start target app if available (full mode only)
+  if [ "$DESKTOP_MODE" = "full" ] && [ -d /home/compeek/target-app ]; then
     echo "[${STEP}] Starting target app on port 8080..."
     cd /home/compeek/target-app
     python3 -m http.server 8080 &
     sleep 0.5
+    STEP=$((STEP + 1))
 
-    echo "[${STEP}] Opening Firefox..."
+    echo "[${STEP}] Opening Firefox to target app..."
     DISPLAY=:1 firefox $FIREFOX_PROFILE_ARGS http://localhost:8080 &
-    sleep 2
-    STEP=$((STEP + 1))
   else
-    echo "[${STEP}] No target app found, skipping."
-    STEP=$((STEP + 1))
+    echo "[${STEP}] Opening Firefox..."
+    DISPLAY=:1 firefox $FIREFOX_PROFILE_ARGS &
   fi
-elif [ "$DESKTOP_MODE" = "browser" ]; then
-  echo "[${STEP}] Opening Firefox..."
-  DISPLAY=:1 firefox $FIREFOX_PROFILE_ARGS &
-  sleep 2
+  sleep 3
+
+  # Maximize Firefox window
+  DISPLAY=:1 xdotool search --onlyvisible --class Firefox windowactivate --sync key F11 2>/dev/null || true
   STEP=$((STEP + 1))
 fi
 
-# 6. Start tool server
+# 7. Start tool server
 echo "[${STEP}] Starting tool server on port ${PORT:-3000}..."
 cd /home/compeek/app
 node dist/container/server.js &

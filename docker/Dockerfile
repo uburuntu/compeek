@@ -11,16 +11,18 @@ RUN apt-get update && apt-get install -y \
     # X11 / VNC
     xvfb \
     x11vnc \
-    mutter \
+    xfwm4 \
     tint2 \
-    # noVNC
-    novnc \
+    # noVNC dependencies
     websockify \
     # Desktop utilities
     xdotool \
     scrot \
     xclip \
     imagemagick \
+    feh \
+    xfce4-terminal \
+    thunar \
     # Python (for simple file server)
     python3 \
     # Build tools
@@ -57,7 +59,7 @@ RUN mkdir -p /usr/lib/firefox/distribution && cat > /usr/lib/firefox/distributio
     "DisablePocket": true,
     "OverrideFirstRunPage": "",
     "OverridePostUpdatePage": "",
-    "Homepage": { "URL": "about:blank", "Locked": false, "StartPage": "homepage" },
+    "Homepage": { "URL": "file:///home/compeek/homepage.html", "Locked": false, "StartPage": "homepage" },
     "NewTabPage": false,
     "NoDefaultBookmarks": true,
     "OfferToSaveLogins": false,
@@ -76,9 +78,35 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Install localtunnel globally for public access
 RUN npm install -g localtunnel
 
+# Install noVNC from GitHub (apt package has version mismatches on 24.04)
+RUN git clone --depth 1 --branch v1.6.0 https://github.com/novnc/noVNC.git /opt/novnc
+
+# Custom noVNC viewer optimized for iframe embedding
+COPY docker/compeek-vnc.html /opt/novnc/compeek-vnc.html
+
 # Create app user
 RUN useradd -m -s /bin/bash compeek
 RUN mkdir -p /home/compeek/data && chown compeek:compeek /home/compeek/data
+
+# Desktop theming: dark wallpaper + tint2 panel config + GTK dark mode
+RUN convert -size 1280x720 \
+    gradient:'#0a0a14'-'#141428' \
+    -blur 0x2 \
+    /home/compeek/wallpaper.png
+
+COPY docker/tint2rc /home/compeek/.config/tint2/tint2rc
+RUN mkdir -p /home/compeek/.config/gtk-3.0 \
+    && printf '[Settings]\ngtk-application-prefer-dark-theme=1\ngtk-theme-name=Adwaita-dark\ngtk-icon-theme-name=Adwaita\n' \
+       > /home/compeek/.config/gtk-3.0/settings.ini
+
+# XFWM4 dark theme
+RUN mkdir -p /home/compeek/.config/xfce4/xfconf/xfce-perchannel-xml \
+    && printf '<?xml version="1.0" encoding="UTF-8"?>\n<channel name="xfwm4" version="1.0">\n  <property name="general" type="empty">\n    <property name="theme" type="string" value="Default-xhdpi"/>\n    <property name="title_font" type="string" value="Noto Sans Bold 9"/>\n    <property name="button_layout" type="string" value="O|HMC"/>\n  </property>\n</channel>\n' \
+       > /home/compeek/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml
+
+# Branded homepage for Firefox
+COPY docker/homepage.html /home/compeek/homepage.html
+
 WORKDIR /home/compeek/app
 
 # Copy package.json and install dependencies (including dev for build)

@@ -78,7 +78,7 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
         <Tooltip content="Tell the AI what to do in plain language">
           <button
             onClick={() => setMode('general')}
-            className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
+            className={`flex-1 text-xs px-3 py-1.5 rounded-md transition-colors font-medium ${
               mode === 'general' ? 'bg-compeek-accent text-white' : 'text-compeek-text-dim hover:text-compeek-text'
             }`}
           >
@@ -88,7 +88,7 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
         <Tooltip content="Upload a photo of a document, and the AI will fill a form with the extracted data">
           <button
             onClick={() => setMode('document')}
-            className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
+            className={`flex-1 text-xs px-3 py-1.5 rounded-md transition-colors font-medium ${
               mode === 'document' ? 'bg-compeek-accent text-white' : 'text-compeek-text-dim hover:text-compeek-text'
             }`}
           >
@@ -107,7 +107,7 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
             <Tooltip key={m.id} content={m.tip}>
               <button
                 onClick={() => setModel(m.id)}
-                className={`flex-1 text-xs py-1 rounded-md transition-colors font-medium ${
+                className={`flex-1 text-xs px-2 py-1 rounded-md transition-colors font-medium ${
                   model === m.id
                     ? 'bg-compeek-accent/20 text-compeek-accent border border-compeek-accent/40'
                     : 'text-compeek-text-dim hover:text-compeek-text border border-transparent'

@@ -30,7 +30,7 @@ export default function SessionView({ config, visible, apiKey, initialModel, onS
   const validationEvents = session.events.filter(e => e.type === 'validation');
   const completionEvent = session.events.find(e => e.type === 'complete');
 
-  const vncUrl = `http://${config.vncHost}:${config.vncPort}/vnc.html?autoconnect=true&resize=scale&show_dot=true${config.vncPassword ? `&password=${encodeURIComponent(config.vncPassword)}` : ''}`;
+  const vncUrl = `http://${config.vncHost}:${config.vncPort}/compeek-vnc.html?show_dot=true${config.vncPassword ? `&password=${encodeURIComponent(config.vncPassword)}` : ''}`;
 
   return (
     <div className={`flex-1 flex overflow-hidden ${visible ? '' : 'hidden'}`}>

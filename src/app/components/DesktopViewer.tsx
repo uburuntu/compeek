@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import emptyDesktopImg from '../assets/empty-desktop.png';
 import Tooltip from './Tooltip';
 
@@ -15,9 +15,26 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
   const containerRef = useRef<HTMLDivElement>(null);
   const [useVnc, setUseVnc] = useState(true);
   const [overlayVisible, setOverlayVisible] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const resolvedVncUrl = vncUrl || `http://${window.location.hostname}:6080/vnc.html?autoconnect=true&resize=scale&show_dot=true`;
+  const resolvedVncUrl = vncUrl || `http://${window.location.hostname}:6080/compeek-vnc.html?autoconnect=true&show_dot=true`;
   const isVncOnly = sessionType === 'vnc-only';
+
+  const toggleFullscreen = useCallback(() => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  // Track fullscreen state
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
 
   // Draw agent overlay on canvas
   useEffect(() => {
@@ -120,7 +137,7 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
       {/* Toolbar */}
       <div className="h-9 flex items-center px-3 gap-2 border-b border-compeek-border bg-compeek-surface shrink-0">
         <span className="text-xs text-compeek-text-dim">Desktop View</span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1">
           {!isVncOnly && (
             <>
               <Tooltip content="Show or hide the AI's click targets on the desktop">
@@ -143,6 +160,25 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
               </Tooltip>
             </>
           )}
+          <span className="w-px h-4 bg-compeek-border mx-0.5" />
+          <Tooltip content={isFullscreen ? 'Exit fullscreen' : 'View desktop in fullscreen'}>
+            <button
+              onClick={toggleFullscreen}
+              className={`text-xs px-2 py-1 rounded transition-colors ${
+                isFullscreen ? 'bg-compeek-accent/20 text-compeek-accent' : 'text-compeek-text-dim hover:text-compeek-text'
+              }`}
+            >
+              {isFullscreen ? 'Exit FS' : 'Fullscreen'}
+            </button>
+          </Tooltip>
+          <Tooltip content="Open the remote desktop in a new browser tab">
+            <button
+              onClick={() => window.open(resolvedVncUrl, '_blank')}
+              className="text-xs text-compeek-text-dim hover:text-compeek-text px-2 py-1 rounded transition-colors"
+            >
+              New Tab ↗
+            </button>
+          </Tooltip>
         </div>
       </div>
 

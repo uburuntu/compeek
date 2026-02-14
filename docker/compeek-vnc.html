@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>compeek — Remote Desktop</title>
+    <style>
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0a0a0f; }
+        #screen { width: 100%; height: 100%; }
+        #status {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 4px 12px; font: 12px/1.5 system-ui, sans-serif;
+            color: #94a3b8; background: rgba(10,10,15,0.85);
+            backdrop-filter: blur(4px); z-index: 10;
+            display: flex; align-items: center; gap: 8px;
+            transition: opacity 0.3s;
+        }
+        #status.connected { opacity: 0; pointer-events: none; }
+        #status:hover { opacity: 1 !important; pointer-events: auto; }
+        .dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; flex-shrink: 0; }
+        .dot.ok { background: #22c55e; }
+    </style>
+</head>
+<body>
+    <div id="status"><span class="dot"></span><span id="msg">Connecting...</span></div>
+    <div id="screen"></div>
+
+    <script type="module">
+        import RFB from './core/rfb.js';
+
+        function param(name, fallback) {
+            const m = location.href.match(new RegExp('[?&]' + name + '=([^&#]*)'));
+            return m ? decodeURIComponent(m[1]) : fallback;
+        }
+
+        const host     = param('host', location.hostname);
+        const port     = param('port', location.port || '6080');
+        const password = param('password', '');
+        const path     = param('path', 'websockify');
+        const viewOnly = param('view_only', '') === 'true';
+
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        const url   = `${proto}://${host}:${port}/${path}`;
+
+        const dot = document.querySelector('.dot');
+        const msg = document.getElementById('msg');
+        const bar = document.getElementById('status');
+
+        const rfb = new RFB(document.getElementById('screen'), url, {
+            credentials: { password },
+            wsProtocols: ['binary'],
+        });
+
+        rfb.scaleViewport = true;
+        rfb.resizeSession = true;
+        rfb.viewOnly = viewOnly;
+        rfb.showDotCursor = param('show_dot', 'true') === 'true';
+        rfb.clipViewport = false;
+        rfb.focusOnClick = true;
+
+        rfb.addEventListener('connect', () => {
+            dot.classList.add('ok');
+            msg.textContent = 'Connected';
+            bar.classList.add('connected');
+        });
+
+        rfb.addEventListener('disconnect', (e) => {
+            dot.classList.remove('ok');
+            msg.textContent = e.detail.clean ? 'Disconnected' : 'Connection lost';
+            bar.classList.remove('connected');
+        });
+
+        rfb.addEventListener('credentialsrequired', () => {
+            const pw = prompt('VNC password:');
+            if (pw) rfb.sendCredentials({ password: pw });
+        });
+
+        rfb.addEventListener('desktopname', (e) => {
+            document.title = `${e.detail.name} — compeek`;
+        });
+    </script>
+</body>
+</html>
