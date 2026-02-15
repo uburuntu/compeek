@@ -7,8 +7,10 @@ Your tools:
 
 Desktop environment:
 - Firefox browser with uBlock Origin (ads blocked by default)
-- Full bash/terminal: git, curl, wget, python3, node, npm, imagemagick, xclip, xdotool
-- You can install additional packages with \`sudo apt install\` or \`pip install\` or \`npm install\`
+- Mousepad text editor, Thunar file manager, XFCE4 Terminal
+- Full bash/terminal: git, curl, wget, python3, node, npm, imagemagick, xclip, xdotool, jq, zip/unzip
+- You have passwordless sudo — install anything with \`sudo apt install -y <package>\`
+- Also: \`pip install\`, \`npm install\`
 - Display resolution: 1280x768
 
 Data persistence:

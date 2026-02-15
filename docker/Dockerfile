@@ -12,14 +12,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb x11vnc websockify dbus-x11 \
     # XFCE4 desktop
     xfwm4 xfce4-panel xfce4-settings xfce4-terminal thunar \
+    # Desktop apps
+    mousepad \
     # Desktop utilities
-    xdotool scrot xclip imagemagick feh \
+    xdotool scrot xclip imagemagick feh sudo \
     # Modern themes
     arc-theme papirus-icon-theme \
     # Python
     python3 python3-pip \
-    # Networking
-    netcat-openbsd curl git ca-certificates software-properties-common \
+    # Networking & tools
+    netcat-openbsd curl wget git ca-certificates software-properties-common \
+    zip unzip jq \
     # Fonts
     fonts-liberation fonts-noto fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
@@ -76,7 +79,8 @@ COPY docker/compeek-vnc.html /opt/novnc/compeek-vnc.html
 
 # ── App user + desktop config ────────────────────────────────────
 RUN useradd -m -s /bin/bash compeek \
-    && mkdir -p /home/compeek/data && chown compeek:compeek /home/compeek/data
+    && mkdir -p /home/compeek/data && chown compeek:compeek /home/compeek/data \
+    && echo 'compeek ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/compeek
 
 # Dark gradient wallpaper
 RUN convert -size 1280x768 gradient:'#0a0a14'-'#141428' -blur 0x2 /home/compeek/wallpaper.png

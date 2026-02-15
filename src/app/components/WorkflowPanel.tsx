@@ -67,7 +67,7 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
   const presetGoals = [
     { label: 'Fill a form', goal: `Navigate to http://localhost:8080/client-onboarding/ and fill the onboarding form with the attached document data. If no document is attached, use realistic test data. Check the consent checkbox and submit.` },
     { label: 'Test a form', goal: `You are a QA tester. Test the form at http://localhost:8080/client-onboarding/ for proper validation behavior.\n\nTEST 1 — Empty submission:\n1. Navigate to http://localhost:8080/client-onboarding/ in Firefox\n2. Without filling any fields, click the "Submit Application" button\n3. Take a screenshot to capture the error states\n\nTEST 2 — Successful submission:\n1. Reload the page (Ctrl+Shift+R)\n2. Fill ALL required fields with valid data\n3. Check the consent checkbox and click Submit\n4. Take a screenshot and verify success\n\nProvide a summary of which tests passed and which failed.` },
-    { label: 'Open a text editor', goal: 'Open the text editor (mousepad or gedit), create a new file, and type "Hello from compeek!"' },
+    { label: 'Open a text editor', goal: 'Open Mousepad text editor, create a new file, and type "Hello from compeek!"' },
     { label: 'Browse the web', goal: 'Open Firefox, navigate to example.com, and take a screenshot of the page' },
   ];
 
