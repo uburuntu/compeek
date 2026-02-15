@@ -1,8 +1,8 @@
 // Agent event types emitted during workflow execution
 export interface AgentEvent {
-  type: 'screenshot' | 'action' | 'thinking' | 'validation' | 'complete' | 'error' | 'status';
+  type: 'screenshot' | 'action' | 'thinking' | 'complete' | 'error' | 'status';
   timestamp: number;
-  data: ScreenshotEvent | ActionEvent | ThinkingEvent | ValidationEvent | CompleteEvent | ErrorEvent | StatusEvent;
+  data: ScreenshotEvent | ActionEvent | ThinkingEvent | CompleteEvent | ErrorEvent | StatusEvent;
 }
 
 export interface ScreenshotEvent {
@@ -22,18 +22,6 @@ export interface ActionEvent {
 export interface ThinkingEvent {
   type: 'thinking';
   content: string;
-}
-
-export interface ValidationEvent {
-  type: 'validation';
-  results: ValidationResult[];
-}
-
-export interface ValidationResult {
-  field: string;
-  expected: string;
-  actual: string;
-  match: boolean;
 }
 
 export interface CompleteEvent {
@@ -57,12 +45,15 @@ export interface StatusEvent {
 }
 
 // Workflow types
+export interface Attachment {
+  base64: string;
+  mimeType: string;
+}
+
 export interface WorkflowRequest {
   goal: string;
   model?: string;
-  context?: Record<string, unknown>;
-  documentBase64?: string;
-  documentMimeType?: string;
+  attachments?: Attachment[];
   maxIterations?: number;
   apiKey?: string;
 }
@@ -75,14 +66,6 @@ export interface WorkflowStatus {
   completedAt?: number;
   actionCount: number;
   events: AgentEvent[];
-}
-
-// Document extraction types
-export interface ExtractedDocument {
-  fields: Record<string, string>;
-  confidence: Record<string, number>;
-  documentType: string;
-  rawText?: string;
 }
 
 // Computer use tool types

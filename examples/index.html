@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>compeek examples</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0f1117;
+      color: #e4e7f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      max-width: 960px;
+      padding: 56px 24px 40px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      color: #e4e7f0;
+    }
+
+    header h1 span {
+      color: #5b6af0;
+    }
+
+    header p {
+      margin-top: 10px;
+      font-size: 15px;
+      color: #8a8fa8;
+      line-height: 1.5;
+    }
+
+    .grid {
+      width: 100%;
+      max-width: 960px;
+      padding: 0 24px 64px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background-color: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 12px;
+      padding: 28px 24px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card:hover {
+      border-color: #5b6af0;
+      transform: translateY(-2px);
+    }
+
+    .card-icon {
+      font-size: 28px;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(91, 106, 240, 0.1);
+      border-radius: 10px;
+    }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #e4e7f0;
+    }
+
+    .card-desc {
+      font-size: 14px;
+      color: #8a8fa8;
+      line-height: 1.55;
+    }
+
+    .card-arrow {
+      margin-top: auto;
+      padding-top: 8px;
+      font-size: 13px;
+      color: #5b6af0;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span>compeek</span> examples</h1>
+    <p>Sample web apps for AI agent interaction and testing</p>
+  </header>
+
+  <div class="grid">
+    <a href="/client-onboarding/" class="card">
+      <div class="card-icon">&#128203;</div>
+      <div class="card-title">Client Onboarding</div>
+      <div class="card-desc">A multi-section registration form with personal info, document info, and contact details.</div>
+      <div class="card-arrow">Open &rarr;</div>
+    </a>
+
+    <a href="/hotel-booking/" class="card">
+      <div class="card-icon">&#127976;</div>
+      <div class="card-title">Hotel Booking</div>
+      <div class="card-desc">A reservation form with dates, guests, room preferences and special requests.</div>
+      <div class="card-arrow">Open &rarr;</div>
+    </a>
+
+    <a href="/feedback-survey/" class="card">
+      <div class="card-icon">&#128172;</div>
+      <div class="card-title">Feedback Survey</div>
+      <div class="card-desc">A satisfaction survey with ratings, checkboxes, and open-ended comments.</div>
+      <div class="card-arrow">Open &rarr;</div>
+    </a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClientHub — Client Onboarding</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-alt: #161922;
+      --border: #2a2d3a;
+      --border-focus: #5b6af0;
+      --accent: #5b6af0;
+      --accent-hover: #7078f5;
+      --accent-glow: rgba(91, 106, 240, 0.15);
+      --text: #e4e7f0;
+      --text-dim: #8a8fa8;
+      --text-muted: #555a6e;
+      --success: #34d399;
+      --success-bg: rgba(52, 211, 153, 0.08);
+      --success-border: rgba(52, 211, 153, 0.25);
+      --error: #f87171;
+      --error-bg: rgba(248, 113, 113, 0.06);
+      --radius: 8px;
+      --radius-lg: 12px;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+      --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    html {
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-logo {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.3px;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+      margin: 0 6px;
+    }
+
+    .header-title {
+      font-size: 13px;
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .header-nav {
+      margin-left: auto;
+      display: flex;
+      gap: 20px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .header-nav span {
+      cursor: pointer;
+      padding: 4px 0;
+      transition: color 0.15s;
+    }
+
+    .header-nav span:hover { color: var(--text); }
+
+    /* ---- Progress indicator ---- */
+    .progress-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+    }
+
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .progress-step.active { color: var(--accent); }
+    .progress-step.completed { color: var(--success); }
+
+    .progress-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .progress-step.active .progress-dot {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+      color: var(--accent);
+    }
+
+    .progress-step.completed .progress-dot {
+      border-color: var(--success);
+      background: var(--success-bg);
+      color: var(--success);
+    }
+
+    .progress-connector {
+      width: 48px;
+      height: 2px;
+      background: var(--border);
+      margin: 0 10px;
+    }
+
+    .progress-connector.completed { background: var(--success); }
+
+    /* ---- Main layout ---- */
+    .main {
+      max-width: 680px;
+      margin: 20px auto;
+      padding: 0 20px 20px;
+    }
+
+    .page-heading {
+      margin-bottom: 18px;
+    }
+
+    .page-heading h1 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      margin-bottom: 3px;
+    }
+
+    .page-heading p {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    /* ---- Form sections ---- */
+    .form-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px 14px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--accent-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .section-icon svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .section-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.2px;
+    }
+
+    /* ---- Grid ---- */
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 14px;
+    }
+
+    .field-grid .span-full {
+      grid-column: 1 / -1;
+    }
+
+    /* ---- Form fields ---- */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-dim);
+      user-select: none;
+    }
+
+    .field label .req {
+      color: var(--error);
+      margin-left: 2px;
+    }
+
+    .field input,
+    .field select {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      font-family: inherit;
+      line-height: 1.4;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .field input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .field input.has-error,
+    .field select.has-error {
+      border-color: var(--error);
+      background: var(--error-bg);
+    }
+
+    .field input.has-error:focus,
+    .field select.has-error:focus {
+      box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.1);
+    }
+
+    .field select {
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%238a8fa8' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+
+    .field-error {
+      font-size: 11px;
+      color: var(--error);
+      min-height: 0;
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.2s, margin-top 0.2s;
+    }
+
+    .field-error.visible {
+      max-height: 20px;
+      margin-top: 1px;
+    }
+
+    /* ---- Consent section ---- */
+    .consent-area {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 4px 0 2px;
+    }
+
+    .consent-area input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin-top: 1px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .consent-area label {
+      font-size: 12px;
+      color: var(--text-dim);
+      cursor: pointer;
+      line-height: 1.5;
+    }
+
+    .consent-error {
+      font-size: 11px;
+      color: var(--error);
+      margin-left: 26px;
+      min-height: 0;
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.2s, margin-top 0.2s;
+    }
+
+    .consent-error.visible {
+      max-height: 20px;
+      margin-top: 4px;
+    }
+
+    /* ---- Submit button ---- */
+    .submit-row {
+      margin-top: 6px;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 11px 20px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, transform 0.1s;
+      box-shadow: var(--shadow);
+    }
+
+    .btn-submit:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-submit:active {
+      transform: scale(0.995);
+    }
+
+    /* ---- Success page ---- */
+    #success-view {
+      display: none;
+    }
+
+    #success-view.visible {
+      display: block;
+    }
+
+    .success-banner {
+      text-align: center;
+      padding: 24px 20px 18px;
+    }
+
+    .success-check {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--success-bg);
+      border: 2px solid var(--success-border);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .success-check svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: var(--success);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .success-banner h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .success-banner p {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    /* ---- Summary card ---- */
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .summary-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--accent);
+      padding: 12px 18px 6px;
+      background: var(--surface-alt);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .summary-section-title:not(:first-child) {
+      border-top: 1px solid var(--border);
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 8px 18px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .summary-row:last-child {
+      border-bottom: none;
+    }
+
+    .summary-row .s-label {
+      color: var(--text-dim);
+      flex-shrink: 0;
+      min-width: 130px;
+    }
+
+    .summary-row .s-value {
+      color: var(--text);
+      font-weight: 500;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .btn-new {
+      display: block;
+      margin: 16px auto 0;
+      padding: 9px 28px;
+      background: transparent;
+      color: var(--accent);
+      border: 1.5px solid var(--accent);
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-new:hover {
+      background: var(--accent-glow);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <span class="header-logo">ClientHub</span>
+    <span class="header-divider"></span>
+    <span class="header-title">Client Onboarding</span>
+    <nav class="header-nav">
+      <span>Dashboard</span>
+      <span>Clients</span>
+      <span>Settings</span>
+    </nav>
+  </header>
+
+  <!-- Progress bar -->
+  <div class="progress-bar" id="progress-bar">
+    <div class="progress-step active" id="step-1">
+      <span class="progress-dot">1</span>
+      <span>Personal</span>
+    </div>
+    <div class="progress-connector" id="conn-1"></div>
+    <div class="progress-step" id="step-2">
+      <span class="progress-dot">2</span>
+      <span>Document</span>
+    </div>
+    <div class="progress-connector" id="conn-2"></div>
+    <div class="progress-step" id="step-3">
+      <span class="progress-dot">3</span>
+      <span>Contact</span>
+    </div>
+    <div class="progress-connector" id="conn-3"></div>
+    <div class="progress-step" id="step-4">
+      <span class="progress-dot">4</span>
+      <span>Review</span>
+    </div>
+  </div>
+
+  <main class="main">
+
+    <!-- ===== Form view ===== -->
+    <div id="form-view">
+      <div class="page-heading">
+        <h1>New Client Onboarding</h1>
+        <p>Fill in all required fields to register a new client.</p>
+      </div>
+
+      <form id="onboarding-form" novalidate autocomplete="off">
+
+        <!-- Personal Information -->
+        <section class="form-section" id="section-personal">
+          <div class="section-header">
+            <div class="section-icon">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+            </div>
+            <h2>Personal Information</h2>
+          </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="firstName">First Name <span class="req">*</span></label>
+              <input type="text" id="firstName" name="firstName" placeholder="e.g. John" required>
+              <span class="field-error" id="firstName-error">First name is required</span>
+            </div>
+            <div class="field">
+              <label for="lastName">Last Name <span class="req">*</span></label>
+              <input type="text" id="lastName" name="lastName" placeholder="e.g. Smith" required>
+              <span class="field-error" id="lastName-error">Last name is required</span>
+            </div>
+            <div class="field">
+              <label for="dateOfBirth">Date of Birth <span class="req">*</span></label>
+              <input type="text" id="dateOfBirth" name="dateOfBirth" placeholder="MM/DD/YYYY" required>
+              <span class="field-error" id="dateOfBirth-error">Valid date is required (MM/DD/YYYY)</span>
+            </div>
+            <div class="field">
+              <label for="gender">Gender</label>
+              <select id="gender" name="gender">
+                <option value="">Select gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="non-binary">Non-binary</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <!-- Document Information -->
+        <section class="form-section" id="section-document">
+          <div class="section-header">
+            <div class="section-icon">
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="13" y2="13"/></svg>
+            </div>
+            <h2>Document Information</h2>
+          </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="documentType">Document Type <span class="req">*</span></label>
+              <select id="documentType" name="documentType" required>
+                <option value="">Select document type</option>
+                <option value="passport">Passport</option>
+                <option value="drivers_license">Driver's License</option>
+                <option value="national_id">National ID Card</option>
+                <option value="residence_permit">Residence Permit</option>
+              </select>
+              <span class="field-error" id="documentType-error">Document type is required</span>
+            </div>
+            <div class="field">
+              <label for="documentNumber">Document Number <span class="req">*</span></label>
+              <input type="text" id="documentNumber" name="documentNumber" placeholder="e.g. AB1234567" required>
+              <span class="field-error" id="documentNumber-error">Document number is required</span>
+            </div>
+            <div class="field">
+              <label for="issueDate">Issue Date</label>
+              <input type="text" id="issueDate" name="issueDate" placeholder="MM/DD/YYYY">
+            </div>
+            <div class="field">
+              <label for="expiryDate">Expiry Date <span class="req">*</span></label>
+              <input type="text" id="expiryDate" name="expiryDate" placeholder="MM/DD/YYYY" required>
+              <span class="field-error" id="expiryDate-error">Expiry date is required</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Contact Information -->
+        <section class="form-section" id="section-contact">
+          <div class="section-header">
+            <div class="section-icon">
+              <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z" fill="none"/><path d="M4 4l8 6 8-6"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+            </div>
+            <h2>Contact Information</h2>
+          </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="email">Email Address <span class="req">*</span></label>
+              <input type="email" id="email" name="email" placeholder="name@example.com" required>
+              <span class="field-error" id="email-error">Valid email address is required</span>
+            </div>
+            <div class="field">
+              <label for="phone">Phone Number</label>
+              <input type="tel" id="phone" name="phone" placeholder="+1 (555) 000-0000">
+            </div>
+            <div class="field span-full">
+              <label for="address">Street Address <span class="req">*</span></label>
+              <input type="text" id="address" name="address" placeholder="e.g. 123 Main Street, Apt 4B" required>
+              <span class="field-error" id="address-error">Street address is required</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Consent -->
+        <section class="form-section" id="section-consent">
+          <div class="section-header">
+            <div class="section-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11V5l8-2 8 2v6c0 6.5-8 11-8 11z"/></svg>
+            </div>
+            <h2>Consent &amp; Agreement</h2>
+          </div>
+          <div class="consent-area">
+            <input type="checkbox" id="consent" name="consent">
+            <label for="consent">I confirm that all information provided is accurate and complete. I consent to the processing of my personal data in accordance with the privacy policy and applicable regulations.</label>
+          </div>
+          <span class="consent-error" id="consent-error">You must agree to the terms to continue</span>
+        </section>
+
+        <!-- Submit -->
+        <div class="submit-row">
+          <button type="submit" class="btn-submit" id="submitBtn">Submit Application</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ===== Success view ===== -->
+    <div id="success-view">
+      <div class="success-banner">
+        <div class="success-check">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h2>Application Submitted</h2>
+        <p>The client has been successfully registered in the system.</p>
+      </div>
+
+      <div class="summary-card" id="summary-card"></div>
+
+      <button class="btn-new" id="btn-new-application">Start New Application</button>
+    </div>
+
+  </main>
+
+  <script>
+    (function() {
+      'use strict';
+
+      const $ = (sel) => document.querySelector(sel);
+      const $$ = (sel) => document.querySelectorAll(sel);
+
+      const form = $('#onboarding-form');
+      const formView = $('#form-view');
+      const successView = $('#success-view');
+      const summaryCard = $('#summary-card');
+
+      // Required field definitions: id -> error message
+      const requiredFields = {
+        firstName:      'First name is required',
+        lastName:       'Last name is required',
+        dateOfBirth:    'Valid date is required (MM/DD/YYYY)',
+        documentType:   'Document type is required',
+        documentNumber: 'Document number is required',
+        expiryDate:     'Expiry date is required',
+        email:          'Valid email address is required',
+        address:        'Street address is required'
+      };
+
+      // Human-readable labels for summary display
+      const fieldLabels = {
+        firstName:      'First Name',
+        lastName:       'Last Name',
+        dateOfBirth:    'Date of Birth',
+        gender:         'Gender',
+        documentType:   'Document Type',
+        documentNumber: 'Document Number',
+        issueDate:      'Issue Date',
+        expiryDate:     'Expiry Date',
+        email:          'Email Address',
+        phone:          'Phone Number',
+        address:        'Street Address',
+        consent:        'Consent Given'
+      };
+
+      // Display labels for select options
+      const selectDisplayValues = {
+        male: 'Male',
+        female: 'Female',
+        'non-binary': 'Non-binary',
+        prefer_not_to_say: 'Prefer not to say',
+        passport: 'Passport',
+        drivers_license: "Driver's License",
+        national_id: 'National ID Card',
+        residence_permit: 'Residence Permit'
+      };
+
+      // Clear a single field error
+      function clearFieldError(id) {
+        const input = $('#' + id);
+        const errEl = $('#' + id + '-error');
+        if (input) input.classList.remove('has-error');
+        if (errEl) errEl.classList.remove('visible');
+      }
+
+      // Show a single field error
+      function showFieldError(id) {
+        const input = $('#' + id);
+        const errEl = $('#' + id + '-error');
+        if (input) input.classList.add('has-error');
+        if (errEl) errEl.classList.add('visible');
+      }
+
+      // Attach live clearing: once user starts typing, remove the error
+      Object.keys(requiredFields).forEach(function(id) {
+        const el = $('#' + id);
+        if (!el) return;
+        const event = el.tagName === 'SELECT' ? 'change' : 'input';
+        el.addEventListener(event, function() {
+          clearFieldError(id);
+        });
+      });
+
+      // Consent checkbox clears its error on change
+      $('#consent').addEventListener('change', function() {
+        $('#consent-error').classList.remove('visible');
+      });
+
+      // Simple date pattern check
+      function isValidDate(str) {
+        return /^\d{2}\/\d{2}\/\d{4}$/.test(str.trim());
+      }
+
+      // Email pattern check
+      function isValidEmail(str) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim());
+      }
+
+      // Update progress steps
+      function updateProgress(completedSections) {
+        for (var i = 1; i <= 4; i++) {
+          var step = $('#step-' + i);
+          var conn = $('#conn-' + i);
+          step.classList.remove('active', 'completed');
+          if (conn) conn.classList.remove('completed');
+        }
+
+        completedSections.forEach(function(idx) {
+          var step = $('#step-' + idx);
+          var conn = $('#conn-' + idx);
+          step.classList.add('completed');
+          step.querySelector('.progress-dot').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+          if (conn) conn.classList.add('completed');
+        });
+
+        // Find the next incomplete step
+        for (var j = 1; j <= 4; j++) {
+          if (!completedSections.includes(j)) {
+            $('#step-' + j).classList.add('active');
+            break;
+          }
+        }
+      }
+
+      // Check section completeness for progress (non-blocking)
+      function checkProgress() {
+        var completed = [];
+
+        // Section 1: Personal - firstName, lastName, dateOfBirth filled
+        if ($('#firstName').value.trim() && $('#lastName').value.trim() && $('#dateOfBirth').value.trim()) {
+          completed.push(1);
+        }
+        // Section 2: Document - documentType, documentNumber, expiryDate filled
+        if ($('#documentType').value && $('#documentNumber').value.trim() && $('#expiryDate').value.trim()) {
+          completed.push(2);
+        }
+        // Section 3: Contact - email, address filled
+        if ($('#email').value.trim() && $('#address').value.trim()) {
+          completed.push(3);
+        }
+
+        updateProgress(completed);
+      }
+
+      // Monitor fields for progress updates
+      var allInputs = $$('#onboarding-form input, #onboarding-form select');
+      allInputs.forEach(function(el) {
+        el.addEventListener('input', checkProgress);
+        el.addEventListener('change', checkProgress);
+      });
+
+      // Form submission
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Clear all errors first
+        $$('.field-error').forEach(function(el) { el.classList.remove('visible'); });
+        $$('.has-error').forEach(function(el) { el.classList.remove('has-error'); });
+        $('#consent-error').classList.remove('visible');
+
+        var hasErrors = false;
+
+        // Validate required text/select fields
+        Object.keys(requiredFields).forEach(function(id) {
+          var el = $('#' + id);
+          if (!el) return;
+          var val = el.value.trim();
+
+          if (!val) {
+            showFieldError(id);
+            hasErrors = true;
+            return;
+          }
+
+          // Date format checks
+          if ((id === 'dateOfBirth' || id === 'expiryDate') && !isValidDate(val)) {
+            showFieldError(id);
+            hasErrors = true;
+            return;
+          }
+
+          // Email format check
+          if (id === 'email' && !isValidEmail(val)) {
+            showFieldError(id);
+            hasErrors = true;
+            return;
+          }
+        });
+
+        // Consent check
+        if (!$('#consent').checked) {
+          $('#consent-error').classList.add('visible');
+          hasErrors = true;
+        }
+
+        if (hasErrors) {
+          // Scroll first error into view
+          var firstError = document.querySelector('.has-error');
+          if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+
+        // Collect data
+        var data = {};
+        var formData = new FormData(form);
+        formData.forEach(function(value, key) {
+          data[key] = value;
+        });
+        data.consent = $('#consent').checked ? 'Yes' : 'No';
+
+        // Build summary HTML with grouped sections
+        var sections = [
+          {
+            title: 'Personal Information',
+            fields: ['firstName', 'lastName', 'dateOfBirth', 'gender']
+          },
+          {
+            title: 'Document Information',
+            fields: ['documentType', 'documentNumber', 'issueDate', 'expiryDate']
+          },
+          {
+            title: 'Contact Information',
+            fields: ['email', 'phone', 'address']
+          },
+          {
+            title: 'Consent',
+            fields: ['consent']
+          }
+        ];
+
+        var html = '';
+        sections.forEach(function(section) {
+          html += '<div class="summary-section-title">' + section.title + '</div>';
+          section.fields.forEach(function(key) {
+            var val = data[key];
+            if (!val || !fieldLabels[key]) return;
+            // Use display label for select values
+            var displayVal = selectDisplayValues[val] || val;
+            html += '<div class="summary-row"><span class="s-label">' + fieldLabels[key] + '</span><span class="s-value">' + displayVal + '</span></div>';
+          });
+        });
+
+        summaryCard.innerHTML = html;
+
+        // Complete all progress steps
+        updateProgress([1, 2, 3, 4]);
+
+        // Switch views
+        formView.style.display = 'none';
+        successView.classList.add('visible');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      // New application button
+      $('#btn-new-application').addEventListener('click', function() {
+        form.reset();
+        formView.style.display = 'block';
+        successView.classList.remove('visible');
+        updateProgress([]);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      // Init progress
+      updateProgress([]);
+    })();
+  </script>
+</body>
+</html>

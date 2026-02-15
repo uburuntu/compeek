@@ -149,16 +149,23 @@ export default function ActivityFeed({ events, completionEvent }: Props) {
       })}
 
       {completionEvent && (
-        <div className={`p-3 rounded-lg mt-2 text-xs animate-slide-in ${
+        <div className={`p-4 rounded-lg mt-2 text-xs animate-scale-in ${
           completionEvent.data.success
             ? 'bg-compeek-success/10 border border-compeek-success/30 text-compeek-success'
             : 'bg-compeek-error/10 border border-compeek-error/30 text-compeek-error'
         }`}>
-          <div className="font-medium mb-1">
-            {completionEvent.data.success ? 'Workflow completed' : 'Workflow failed'}
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <span className="text-2xl">
+              {completionEvent.data.success ? '\u2713' : '\u2717'}
+            </span>
+            <span className="text-sm font-semibold">
+              {completionEvent.data.success ? 'Workflow completed' : 'Workflow failed'}
+            </span>
           </div>
-          <p className="opacity-80 leading-relaxed">{completionEvent.data.message}</p>
-          <p className="mt-1 opacity-60">{completionEvent.data.totalActions} actions performed</p>
+          <p className="opacity-80 leading-relaxed text-center">{completionEvent.data.message}</p>
+          <p className="mt-2 opacity-60 text-center font-medium">
+            {completionEvent.data.totalActions} actions performed
+          </p>
         </div>
       )}
 

@@ -8,17 +8,43 @@ interface Props {
   isRunning: boolean;
   vncUrl?: string;
   sessionType?: 'compeek' | 'vnc-only';
+  currentStep?: number | null;
+  modelName?: string | null;
 }
 
-export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, sessionType }: Props) {
+function formatElapsed(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, sessionType, currentStep, modelName }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [useVnc, setUseVnc] = useState(true);
   const [overlayVisible, setOverlayVisible] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const startTimeRef = useRef<number | null>(null);
 
   const resolvedVncUrl = vncUrl || `${window.location.protocol}//${window.location.hostname}:6080/compeek-vnc.html?autoconnect=true&show_dot=true`;
   const isVncOnly = sessionType === 'vnc-only';
+
+  // Elapsed timer
+  useEffect(() => {
+    if (isRunning) {
+      startTimeRef.current = Date.now();
+      setElapsed(0);
+      const interval = setInterval(() => {
+        if (startTimeRef.current) {
+          setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    } else {
+      startTimeRef.current = null;
+    }
+  }, [isRunning]);
 
   const toggleFullscreen = useCallback(() => {
     if (!containerRef.current) return;
@@ -56,29 +82,42 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
       const sx = x * scaleX;
       const sy = y * scaleY;
 
-      // Pulsing circle at click target
+      // Outer glow ring
       ctx.beginPath();
-      ctx.arc(sx, sy, 20, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(99, 102, 241, 0.8)';
-      ctx.lineWidth = 2;
+      ctx.arc(sx, sy, 40, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.3)';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
+
+      // Main circle at click target
+      ctx.beginPath();
+      ctx.arc(sx, sy, 30, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.8)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Subtle fill
+      ctx.beginPath();
+      ctx.arc(sx, sy, 30, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(99, 102, 241, 0.08)';
+      ctx.fill();
 
       // Crosshair
       ctx.beginPath();
-      ctx.moveTo(sx - 8, sy);
-      ctx.lineTo(sx + 8, sy);
-      ctx.moveTo(sx, sy - 8);
-      ctx.lineTo(sx, sy + 8);
+      ctx.moveTo(sx - 12, sy);
+      ctx.lineTo(sx + 12, sy);
+      ctx.moveTo(sx, sy - 12);
+      ctx.lineTo(sx, sy + 12);
       ctx.strokeStyle = 'rgba(99, 102, 241, 0.6)';
       ctx.lineWidth = 1;
       ctx.stroke();
 
       // Action label
       const label = action.description || action.action;
-      ctx.font = '12px "Inter", sans-serif';
+      ctx.font = '13px "Inter", sans-serif';
       const metrics = ctx.measureText(label);
-      const labelX = Math.min(sx + 24, canvas.width - metrics.width - 16);
-      const labelY = Math.max(sy - 10, 24);
+      const labelX = Math.min(sx + 34, canvas.width - metrics.width - 16);
+      const labelY = Math.max(sy - 14, 24);
 
       // Label background
       ctx.fillStyle = 'rgba(10, 10, 15, 0.85)';
@@ -111,10 +150,10 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
       ctx.fillText('ZOOM', x1 * scaleX + 4, y1 * scaleY - 6);
     }
 
-    // Auto-clear overlay after 3 seconds
+    // Auto-clear overlay after 4 seconds
     const timer = setTimeout(() => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }, 3000);
+    }, 4000);
 
     return () => clearTimeout(timer);
   }, [action, overlayVisible]);
@@ -215,11 +254,17 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
           />
         )}
 
-        {/* Running indicator */}
+        {/* Running indicator with model, step, and timer */}
         {!isVncOnly && isRunning && (
           <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/70 backdrop-blur-sm rounded-full px-3 py-1.5 pulse-glow" style={{ zIndex: 20 }}>
             <div className="w-2 h-2 rounded-full bg-compeek-accent animate-pulse" />
-            <span className="text-xs font-medium text-compeek-accent">Agent working...</span>
+            <span className="text-xs font-medium text-compeek-accent">
+              {[
+                modelName,
+                currentStep ? `Step ${currentStep}` : null,
+                formatElapsed(elapsed),
+              ].filter(Boolean).join(' \u00b7 ')}
+            </span>
           </div>
         )}
       </div>

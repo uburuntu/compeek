@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { SYSTEM_PROMPT_BASE, SYSTEM_PROMPT_WINDOWS, SYSTEM_PROMPT_MACOS, FORM_FILL_PROMPT, GENERAL_WORKFLOW_PROMPT } from '@/agent/prompts';
+import { SYSTEM_PROMPT_BASE, SYSTEM_PROMPT_WINDOWS, SYSTEM_PROMPT_MACOS, GENERAL_WORKFLOW_PROMPT } from '@/agent/prompts';
 import type { AgentEvent, ComputerAction } from '@/agent/types';
 import { buildTextEditorCommand, describeTextEditorAction } from '@/agent/text-editor';
 import type { TextEditorInput } from '@/agent/text-editor';
@@ -17,9 +17,7 @@ export interface BrowserWorkflowRequest {
   containerUrl: string;
   apiToken?: string;
   model?: string;
-  context?: Record<string, unknown>;
-  documentBase64?: string;
-  documentMimeType?: string;
+  attachments?: Array<{ base64: string; mimeType: string }>;
   maxIterations?: number;
   osType?: 'linux' | 'windows' | 'macos';
 }
@@ -94,27 +92,24 @@ export async function agentLoop(
     : SYSTEM_PROMPT_BASE;
 
   // Build prompt
-  let userPrompt: string;
-  if (request.context && request.documentBase64) {
-    userPrompt = FORM_FILL_PROMPT.replace('{data}', JSON.stringify(request.context, null, 2));
-  } else {
-    const contextStr = request.context ? `\nAdditional context:\n${JSON.stringify(request.context, null, 2)}` : '';
-    userPrompt = GENERAL_WORKFLOW_PROMPT
-      .replace('{goal}', request.goal)
-      .replace('{context}', contextStr);
-  }
+  const userPrompt = GENERAL_WORKFLOW_PROMPT
+    .replace('{goal}', request.goal)
+    .replace('{context}', '');
 
   const userContent: Anthropic.Beta.Messages.BetaContentBlockParam[] = [];
 
-  if (request.documentBase64 && request.documentMimeType) {
-    userContent.push({
-      type: 'image',
-      source: {
-        type: 'base64',
-        media_type: request.documentMimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-        data: request.documentBase64,
-      },
-    });
+  // Add all attachment images
+  if (request.attachments?.length) {
+    for (const attachment of request.attachments) {
+      userContent.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: attachment.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          data: attachment.base64,
+        },
+      });
+    }
   }
 
   userContent.push({ type: 'text', text: userPrompt });
@@ -265,47 +260,4 @@ export async function agentLoop(
   // Max iterations
   onEvent?.(makeEvent('error', { type: 'error', message: `Maximum iterations (${maxIterations}) reached.`, recoverable: false }));
   return { success: false, actionCount, message: 'Maximum iterations reached' };
-}
-
-/**
- * Extract structured data from a document image using Anthropic Vision API (browser-side).
- */
-export async function extractDocument(
-  apiKey: string,
-  base64: string,
-  mimeType: string,
-): Promise<{ fields: Record<string, string>; documentType: string } | { error: string }> {
-  try {
-    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-    const response = await client.messages.create({
-      model: DEFAULT_MODEL,
-      max_tokens: 2048,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-              data: base64,
-            },
-          },
-          {
-            type: 'text',
-            text: `Analyze this document image and extract all relevant personal/identifying information. Extract fields like firstName, lastName, dateOfBirth (YYYY-MM-DD), gender, nationality, documentType, documentNumber, address, email, phone. Respond in JSON: { "documentType": "...", "fields": { ... }, "confidence": { ... } }`,
-          },
-        ],
-      }],
-    });
-
-    const textBlock = response.content.find(b => b.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') return { error: 'No response' };
-
-    const jsonMatch = textBlock.text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/) || [null, textBlock.text];
-    const parsed = JSON.parse(jsonMatch[1]!);
-    return { documentType: parsed.documentType || 'unknown', fields: parsed.fields || {} };
-  } catch (err: any) {
-    return { error: err.message || String(err) };
-  }
 }

@@ -137,17 +137,17 @@ if mountpoint -q /home/compeek/data 2>/dev/null; then
   STEP=$((STEP + 1))
 fi
 
-# 6. Start target app + Firefox
+# 6. Start example apps + Firefox
 if [ "$DESKTOP_MODE" = "full" ] || [ "$DESKTOP_MODE" = "browser" ]; then
-  # Start target app if available (full mode only)
-  if [ "$DESKTOP_MODE" = "full" ] && [ -d /home/compeek/target-app ]; then
-    echo "[${STEP}] Starting target app on port 8080..."
-    cd /home/compeek/target-app
+  # Start example apps if available (full mode only)
+  if [ "$DESKTOP_MODE" = "full" ] && [ -d /home/compeek/examples ]; then
+    echo "[${STEP}] Starting example apps on port 8080..."
+    cd /home/compeek/examples
     python3 -m http.server 8080 &
     sleep 0.5
     STEP=$((STEP + 1))
 
-    echo "[${STEP}] Opening Firefox to target app..."
+    echo "[${STEP}] Opening Firefox to example apps..."
     DISPLAY=:1 firefox $FIREFOX_PROFILE_ARGS http://localhost:8080 &
   else
     echo "[${STEP}] Opening Firefox..."

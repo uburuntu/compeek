@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1280">
+  <title>StayHub — Hotel Reservation</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --accent: #5b6af0;
+      --accent-hover: #4a59e0;
+      --text: #e4e7f0;
+      --text-dim: #8a8fa8;
+      --success: #34d399;
+      --error: #f87171;
+    }
+
+    html, body {
+      width: 1280px;
+      min-height: 720px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 56px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      color: #fff;
+    }
+
+    nav {
+      display: flex;
+      gap: 28px;
+    }
+
+    nav a {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    nav a:hover, nav a.active {
+      color: var(--text);
+    }
+
+    /* Main */
+    main {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 28px 40px 40px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      color: var(--text-dim);
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+
+    /* Sections */
+    .form-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px 26px 26px;
+      margin-bottom: 18px;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title .badge {
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 22px;
+      text-align: center;
+    }
+
+    /* Grid */
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px 18px;
+    }
+
+    .field-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 18px;
+    }
+
+    .field-grid-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 14px 18px;
+    }
+
+    .field-full {
+      grid-column: 1 / -1;
+    }
+
+    /* Fields */
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .field label .req {
+      color: var(--error);
+      margin-left: 2px;
+    }
+
+    .field input[type="text"],
+    .field input[type="email"],
+    .field input[type="tel"],
+    .field input[type="date"],
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .field input.invalid,
+    .field select.invalid,
+    .field textarea.invalid {
+      border-color: var(--error);
+    }
+
+    .field select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238a8fa8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    .field textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .field input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.6);
+    }
+
+    .field-error {
+      font-size: 11px;
+      color: var(--error);
+      margin-top: 3px;
+      display: none;
+    }
+
+    .field-error.visible {
+      display: block;
+    }
+
+    /* Radio groups */
+    .radio-group {
+      display: flex;
+      gap: 16px;
+      padding-top: 4px;
+    }
+
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text);
+      text-transform: none;
+      letter-spacing: 0;
+      cursor: pointer;
+      margin-bottom: 0;
+    }
+
+    .radio-group input[type="radio"] {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      background: var(--bg);
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .radio-group input[type="radio"]:checked {
+      border-color: var(--accent);
+    }
+
+    .radio-group input[type="radio"]:checked::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
+    /* Checkbox */
+    .checkbox-field {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding-top: 2px;
+    }
+
+    .checkbox-field input[type="checkbox"] {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg);
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 1px;
+      position: relative;
+    }
+
+    .checkbox-field input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .checkbox-field input[type="checkbox"]:checked::after {
+      content: "";
+      position: absolute;
+      top: 1px;
+      left: 4px;
+      width: 4px;
+      height: 8px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .checkbox-field input[type="checkbox"].invalid {
+      border-color: var(--error);
+    }
+
+    .checkbox-field span {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.4;
+    }
+
+    .checkbox-field a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .checkbox-field a:hover {
+      text-decoration: underline;
+    }
+
+    /* Submit */
+    .form-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 22px;
+    }
+
+    .btn-submit {
+      padding: 11px 36px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn-submit:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-submit:active {
+      transform: scale(0.98);
+    }
+
+    .form-note {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Confirmation overlay */
+    .confirmation-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 17, 23, 0.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .confirmation-overlay.visible {
+      display: flex;
+    }
+
+    .confirmation-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 32px 38px;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .confirmation-icon {
+      width: 52px;
+      height: 52px;
+      background: rgba(52, 211, 153, 0.12);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .confirmation-icon svg {
+      width: 26px;
+      height: 26px;
+      stroke: var(--success);
+    }
+
+    .confirmation-card h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .confirmation-card .ref-number {
+      display: inline-block;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+      color: var(--accent);
+      margin: 12px 0 18px;
+      letter-spacing: 1px;
+    }
+
+    .booking-summary {
+      text-align: left;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+
+    .booking-summary dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 16px;
+      font-size: 13px;
+    }
+
+    .booking-summary dt {
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .booking-summary dd {
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    .btn-close {
+      padding: 9px 28px;
+      background: var(--border);
+      color: var(--text);
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-close:hover {
+      background: #363a4a;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <a href="#" class="logo">
+      <span class="logo-icon">S</span>
+      StayHub
+    </a>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">Rooms</a>
+      <a href="#" class="active">Reservations</a>
+      <a href="#">Contact</a>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <h1 class="page-title">Hotel Reservation</h1>
+    <p class="page-subtitle">Complete the form below to reserve your stay. Fields marked with * are required.</p>
+
+    <form id="bookingForm" novalidate>
+
+      <!-- 1. Guest Information -->
+      <div class="form-section">
+        <div class="section-title">
+          <span class="badge">1</span>
+          Guest Information
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="fullName">Full Name <span class="req">*</span></label>
+            <input type="text" id="fullName" name="fullName" placeholder="John Doe" required>
+            <div class="field-error" id="fullNameError">Please enter your full name.</div>
+          </div>
+          <div class="field">
+            <label for="email">Email Address <span class="req">*</span></label>
+            <input type="email" id="email" name="email" placeholder="john@example.com" required>
+            <div class="field-error" id="emailError">Please enter a valid email address.</div>
+          </div>
+          <div class="field">
+            <label for="phone">Phone Number <span class="req">*</span></label>
+            <input type="tel" id="phone" name="phone" placeholder="+1 (555) 123-4567" required>
+            <div class="field-error" id="phoneError">Please enter your phone number.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Stay Details -->
+      <div class="form-section">
+        <div class="section-title">
+          <span class="badge">2</span>
+          Stay Details
+        </div>
+        <div class="field-grid-4">
+          <div class="field">
+            <label for="checkin">Check-in Date <span class="req">*</span></label>
+            <input type="date" id="checkin" name="checkin" required>
+            <div class="field-error" id="checkinError">Please select a check-in date.</div>
+          </div>
+          <div class="field">
+            <label for="checkout">Check-out Date <span class="req">*</span></label>
+            <input type="date" id="checkout" name="checkout" required>
+            <div class="field-error" id="checkoutError">Please select a check-out date.</div>
+          </div>
+          <div class="field">
+            <label for="guests">Number of Guests <span class="req">*</span></label>
+            <select id="guests" name="guests" required>
+              <option value="">Select</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+            </select>
+            <div class="field-error" id="guestsError">Please select number of guests.</div>
+          </div>
+          <div class="field">
+            <label for="roomType">Room Type <span class="req">*</span></label>
+            <select id="roomType" name="roomType" required>
+              <option value="">Select</option>
+              <option value="Standard">Standard</option>
+              <option value="Deluxe">Deluxe</option>
+              <option value="Suite">Suite</option>
+              <option value="Presidential">Presidential</option>
+            </select>
+            <div class="field-error" id="roomTypeError">Please select a room type.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Preferences -->
+      <div class="form-section">
+        <div class="section-title">
+          <span class="badge">3</span>
+          Preferences
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Smoking Preference</label>
+            <div class="radio-group">
+              <label>
+                <input type="radio" name="smoking" value="Non-Smoking" checked>
+                Non-Smoking
+              </label>
+              <label>
+                <input type="radio" name="smoking" value="Smoking">
+                Smoking
+              </label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Floor Preference</label>
+            <div class="radio-group">
+              <label>
+                <input type="radio" name="floor" value="Low" checked>
+                Low
+              </label>
+              <label>
+                <input type="radio" name="floor" value="Mid">
+                Mid
+              </label>
+              <label>
+                <input type="radio" name="floor" value="High">
+                High
+              </label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="requests">Special Requests</label>
+            <textarea id="requests" name="requests" placeholder="Any special requirements..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Payment -->
+      <div class="form-section">
+        <div class="section-title">
+          <span class="badge">4</span>
+          Payment Information
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="cardType">Card Type <span class="req">*</span></label>
+            <select id="cardType" name="cardType" required>
+              <option value="">Select</option>
+              <option value="Visa">Visa</option>
+              <option value="Mastercard">Mastercard</option>
+              <option value="Amex">American Express</option>
+            </select>
+            <div class="field-error" id="cardTypeError">Please select a card type.</div>
+          </div>
+          <div class="field">
+            <label for="cardNumber">Card Number <span class="req">*</span></label>
+            <input type="text" id="cardNumber" name="cardNumber" placeholder="4242 4242 4242 4242" maxlength="19" required>
+            <div class="field-error" id="cardNumberError">Please enter your card number.</div>
+          </div>
+          <div class="field">
+            <label for="expiry">Expiry Date <span class="req">*</span></label>
+            <input type="text" id="expiry" name="expiry" placeholder="MM/YY" maxlength="5" required>
+            <div class="field-error" id="expiryError">Please enter the expiry date (MM/YY).</div>
+          </div>
+        </div>
+        <div style="margin-top: 16px;">
+          <div class="checkbox-field">
+            <input type="checkbox" id="terms" name="terms" required>
+            <span>I agree to the <a href="#">Terms & Conditions</a> and <a href="#">Cancellation Policy</a>. <span class="req">*</span></span>
+          </div>
+          <div class="field-error" id="termsError" style="margin-left: 26px;">You must agree to the terms to proceed.</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <span class="form-note">Your payment details are encrypted and secure.</span>
+        <button type="submit" class="btn-submit">Book Now</button>
+      </div>
+
+    </form>
+  </main>
+
+  <!-- Confirmation Overlay -->
+  <div class="confirmation-overlay" id="confirmation">
+    <div class="confirmation-card">
+      <div class="confirmation-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <h2>Booking Confirmed!</h2>
+      <p style="color: var(--text-dim); font-size: 13px;">Your reservation has been successfully placed.</p>
+      <div class="ref-number" id="refNumber"></div>
+      <div class="booking-summary">
+        <dl id="summaryList"></dl>
+      </div>
+      <button class="btn-close" id="closeConfirmation">Close</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const form = document.getElementById("bookingForm");
+      const overlay = document.getElementById("confirmation");
+
+      // Set default check-in to tomorrow and check-out to day after
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dayAfter = new Date(today);
+      dayAfter.setDate(dayAfter.getDate() + 2);
+      document.getElementById("checkin").min = formatDate(tomorrow);
+      document.getElementById("checkout").min = formatDate(dayAfter);
+
+      function formatDate(d) {
+        return d.toISOString().split("T")[0];
+      }
+
+      function formatDisplayDate(dateStr) {
+        if (!dateStr) return "";
+        const d = new Date(dateStr + "T00:00:00");
+        return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+      }
+
+      // Remove invalid state on input
+      form.querySelectorAll("input, select, textarea").forEach(function (el) {
+        el.addEventListener("input", function () {
+          el.classList.remove("invalid");
+          var errEl = document.getElementById(el.id + "Error");
+          if (errEl) errEl.classList.remove("visible");
+        });
+        el.addEventListener("change", function () {
+          el.classList.remove("invalid");
+          var errEl = document.getElementById(el.id + "Error");
+          if (errEl) errEl.classList.remove("visible");
+        });
+      });
+
+      function showError(id) {
+        var el = document.getElementById(id);
+        var errEl = document.getElementById(id + "Error");
+        if (el) el.classList.add("invalid");
+        if (errEl) errEl.classList.add("visible");
+      }
+
+      function clearErrors() {
+        form.querySelectorAll(".invalid").forEach(function (el) { el.classList.remove("invalid"); });
+        form.querySelectorAll(".field-error.visible").forEach(function (el) { el.classList.remove("visible"); });
+      }
+
+      function validate() {
+        clearErrors();
+        var valid = true;
+
+        var requiredTexts = [
+          { id: "fullName" },
+          { id: "email" },
+          { id: "phone" },
+          { id: "checkin" },
+          { id: "checkout" },
+          { id: "cardNumber" },
+          { id: "expiry" }
+        ];
+
+        requiredTexts.forEach(function (f) {
+          var el = document.getElementById(f.id);
+          if (!el.value.trim()) {
+            showError(f.id);
+            valid = false;
+          }
+        });
+
+        // Email format
+        var emailEl = document.getElementById("email");
+        if (emailEl.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value.trim())) {
+          showError("email");
+          valid = false;
+        }
+
+        // Selects
+        ["guests", "roomType", "cardType"].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (!el.value) {
+            showError(id);
+            valid = false;
+          }
+        });
+
+        // Expiry format
+        var expiryEl = document.getElementById("expiry");
+        if (expiryEl.value.trim() && !/^\d{2}\/\d{2}$/.test(expiryEl.value.trim())) {
+          showError("expiry");
+          valid = false;
+        }
+
+        // Check-out after check-in
+        var ci = document.getElementById("checkin").value;
+        var co = document.getElementById("checkout").value;
+        if (ci && co && co <= ci) {
+          showError("checkout");
+          document.getElementById("checkoutError").textContent = "Check-out must be after check-in.";
+          valid = false;
+        }
+
+        // Terms
+        var termsEl = document.getElementById("terms");
+        if (!termsEl.checked) {
+          termsEl.classList.add("invalid");
+          document.getElementById("termsError").classList.add("visible");
+          valid = false;
+        }
+
+        return valid;
+      }
+
+      function generateRef() {
+        var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        var ref = "SH-";
+        for (var i = 0; i < 8; i++) {
+          ref += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return ref;
+      }
+
+      function showConfirmation() {
+        var ref = generateRef();
+        document.getElementById("refNumber").textContent = ref;
+
+        var smoking = document.querySelector('input[name="smoking"]:checked').value;
+        var floor = document.querySelector('input[name="floor"]:checked').value;
+        var requests = document.getElementById("requests").value.trim();
+
+        var items = [
+          ["Guest", document.getElementById("fullName").value],
+          ["Email", document.getElementById("email").value],
+          ["Phone", document.getElementById("phone").value],
+          ["Check-in", formatDisplayDate(document.getElementById("checkin").value)],
+          ["Check-out", formatDisplayDate(document.getElementById("checkout").value)],
+          ["Guests", document.getElementById("guests").value],
+          ["Room", document.getElementById("roomType").value],
+          ["Smoking", smoking],
+          ["Floor", floor + " floor"],
+          ["Payment", document.getElementById("cardType").value + " ending " + document.getElementById("cardNumber").value.trim().slice(-4)]
+        ];
+
+        if (requests) {
+          items.push(["Requests", requests]);
+        }
+
+        var dl = document.getElementById("summaryList");
+        dl.innerHTML = "";
+        items.forEach(function (pair) {
+          var dt = document.createElement("dt");
+          dt.textContent = pair[0];
+          var dd = document.createElement("dd");
+          dd.textContent = pair[1];
+          dl.appendChild(dt);
+          dl.appendChild(dd);
+        });
+
+        overlay.classList.add("visible");
+      }
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (validate()) {
+          showConfirmation();
+        }
+      });
+
+      document.getElementById("closeConfirmation").addEventListener("click", function () {
+        overlay.classList.remove("visible");
+      });
+
+      overlay.addEventListener("click", function (e) {
+        if (e.target === overlay) {
+          overlay.classList.remove("visible");
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>

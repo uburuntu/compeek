@@ -3,11 +3,10 @@ import DesktopViewer from './DesktopViewer';
 import WorkflowPanel from './WorkflowPanel';
 import ActivityFeed from './ActivityFeed';
 import ThinkingDisplay from './ThinkingDisplay';
-import ValidationReport from './ValidationReport';
 import { useSession } from '../hooks/useSession';
 import type { SessionConfig, SessionStatus } from '../types/session';
 
-type Tab = 'activity' | 'thinking' | 'validation';
+type Tab = 'activity' | 'thinking';
 
 interface Props {
   config: SessionConfig;
@@ -20,6 +19,7 @@ interface Props {
 export default function SessionView({ config, visible, apiKey, initialModel, onStatusChange }: Props) {
   const session = useSession(config, apiKey);
   const [activeTab, setActiveTab] = useState<Tab>('activity');
+  const [lastSeenThinkingCount, setLastSeenThinkingCount] = useState(0);
 
   useEffect(() => {
     onStatusChange(session.status);
@@ -27,8 +27,26 @@ export default function SessionView({ config, visible, apiKey, initialModel, onS
 
   const thinkingEvents = session.events.filter(e => e.type === 'thinking');
   const actionEvents = session.events.filter(e => e.type === 'action' || e.type === 'status' || e.type === 'screenshot' || e.type === 'error');
-  const validationEvents = session.events.filter(e => e.type === 'validation');
   const completionEvent = session.events.find(e => e.type === 'complete');
+
+  // Track current step from status events
+  const latestStatusEvent = [...session.events].reverse().find(e => e.type === 'status' && e.data.step);
+  const currentStep = latestStatusEvent?.data.step || null;
+
+  // Update seen thinking count when tab is active
+  useEffect(() => {
+    if (activeTab === 'thinking') {
+      setLastSeenThinkingCount(thinkingEvents.length);
+    }
+  }, [activeTab, thinkingEvents.length]);
+
+  const hasNewThinking = thinkingEvents.length > lastSeenThinkingCount && activeTab !== 'thinking';
+
+  // Format model name for display
+  const modelLabel = session.currentModel?.includes('opus') ? 'Opus 4.6'
+    : session.currentModel?.includes('sonnet') ? 'Sonnet 4.5'
+    : session.currentModel?.includes('haiku') ? 'Haiku 4.5'
+    : null;
 
   const isLocalVnc = config.vncHost === 'localhost' || config.vncHost === '127.0.0.1';
   const vncProto = isLocalVnc ? 'http' : 'https';
@@ -45,6 +63,8 @@ export default function SessionView({ config, visible, apiKey, initialModel, onS
           isRunning={session.isRunning}
           vncUrl={vncUrl}
           sessionType={config.type}
+          currentStep={currentStep}
+          modelName={modelLabel}
         />
       </div>
 
@@ -61,19 +81,25 @@ export default function SessionView({ config, visible, apiKey, initialModel, onS
 
           {/* Tab navigation */}
           <div className="flex border-b border-compeek-border shrink-0">
-            {(['activity', 'thinking', 'validation'] as Tab[]).map(tab => (
+            {(['activity', 'thinking'] as Tab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 text-xs font-medium transition-colors ${
+                className={`flex-1 py-2 text-xs font-medium transition-colors relative ${
                   activeTab === tab
                     ? 'text-compeek-accent border-b-2 border-compeek-accent'
                     : 'text-compeek-text-dim hover:text-compeek-text'
                 }`}
               >
                 {tab === 'activity' && `Activity (${actionEvents.length})`}
-                {tab === 'thinking' && `Thinking (${thinkingEvents.length})`}
-                {tab === 'validation' && `Validation`}
+                {tab === 'thinking' && (
+                  <>
+                    {`Thinking (${thinkingEvents.length})`}
+                    {hasNewThinking && (
+                      <span className="absolute top-1.5 right-[calc(50%-30px)] w-2 h-2 rounded-full bg-compeek-accent animate-pulse" />
+                    )}
+                  </>
+                )}
               </button>
             ))}
           </div>
@@ -85,9 +111,6 @@ export default function SessionView({ config, visible, apiKey, initialModel, onS
             )}
             {activeTab === 'thinking' && (
               <ThinkingDisplay events={thinkingEvents} />
-            )}
-            {activeTab === 'validation' && (
-              <ValidationReport events={validationEvents} />
             )}
           </div>
         </div>

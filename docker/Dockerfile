@@ -135,6 +135,9 @@ RUN npx tsc --outDir dist
 # Remove dev dependencies after build
 RUN npm prune --omit=dev
 
+# Copy example apps for the target form
+COPY examples/ /home/compeek/examples/
+
 # Copy entrypoint script
 COPY docker/entrypoint.sh /home/compeek/entrypoint.sh
 RUN chmod +x /home/compeek/entrypoint.sh

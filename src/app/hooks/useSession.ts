@@ -15,7 +15,8 @@ export interface SessionState {
   isRunning: boolean;
   latestScreenshot: string | null;
   latestAction: any;
-  startWorkflow: (goal: string, model?: string, documentBase64?: string, documentMimeType?: string, extractedData?: Record<string, string>) => Promise<void>;
+  currentModel: string | null;
+  startWorkflow: (goal: string, model?: string, attachments?: Array<{ base64: string; mimeType: string }>) => Promise<void>;
   stopWorkflow: () => void;
   containerUrl: string;
 }
@@ -26,6 +27,7 @@ export function useSession(config: SessionConfig, apiKey?: string): SessionState
   const [latestScreenshot, setLatestScreenshot] = useState<string | null>(null);
   const [latestAction, setLatestAction] = useState<any>(null);
   const [status, setStatus] = useState<SessionStatus>('disconnected');
+  const [currentModel, setCurrentModel] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const apiKeyRef = useRef(apiKey);
   apiKeyRef.current = apiKey;
@@ -59,7 +61,7 @@ export function useSession(config: SessionConfig, apiKey?: string): SessionState
     return () => { cancelled = true; clearInterval(interval); };
   }, [config.type, containerUrl]);
 
-  const startWorkflow = useCallback(async (goal: string, model?: string, documentBase64?: string, documentMimeType?: string, extractedData?: Record<string, string>) => {
+  const startWorkflow = useCallback(async (goal: string, model?: string, attachments?: Array<{ base64: string; mimeType: string }>) => {
     if (!apiKeyRef.current) {
       setEvents([{ type: 'error', timestamp: Date.now(), data: { type: 'error', message: 'Set your Anthropic API key in Settings first.', recoverable: false } }]);
       return;
@@ -69,6 +71,7 @@ export function useSession(config: SessionConfig, apiKey?: string): SessionState
     setIsRunning(true);
     setLatestScreenshot(null);
     setLatestAction(null);
+    setCurrentModel(model || null);
 
     const abort = new AbortController();
     abortRef.current = abort;
@@ -87,9 +90,7 @@ export function useSession(config: SessionConfig, apiKey?: string): SessionState
         containerUrl,
         apiToken: config.vncPassword,
         osType: config.osType,
-        documentBase64,
-        documentMimeType,
-        context: extractedData ? { extractedFields: extractedData } : undefined,
+        attachments,
       }, onEvent, abort.signal);
     } catch (err: any) {
       onEvent({
@@ -114,6 +115,7 @@ export function useSession(config: SessionConfig, apiKey?: string): SessionState
     isRunning,
     latestScreenshot,
     latestAction,
+    currentModel,
     startWorkflow,
     stopWorkflow,
     containerUrl,
