@@ -91,7 +91,7 @@ export default function SettingsDialog({ open, settings, onUpdate, onClose }: Pr
                 <Tooltip key={m.id} content={m.tip}>
                   <button
                     onClick={() => onUpdate({ lastModel: m.id })}
-                    className={`flex-1 text-xs py-1 rounded-md transition-colors font-medium ${
+                    className={`flex-1 text-xs px-3 py-1.5 rounded-md transition-colors font-medium ${
                       settings.lastModel === m.id
                         ? 'bg-compeek-accent/20 text-compeek-accent border border-compeek-accent/40'
                         : 'text-compeek-text-dim hover:text-compeek-text border border-transparent'

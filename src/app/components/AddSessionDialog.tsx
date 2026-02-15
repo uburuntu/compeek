@@ -143,7 +143,7 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
                 <button
                   key={os}
                   onClick={() => setCliOs(os)}
-                  className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
+                  className={`flex-1 text-xs px-3 py-2 rounded-md transition-colors font-medium ${
                     cliOs === os ? 'bg-compeek-accent text-white' : 'text-compeek-text-dim hover:text-compeek-text'
                   }`}
                 >
@@ -281,7 +281,7 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
                 <Tooltip content="Full AI agent control with a virtual desktop">
                   <button
                     onClick={() => { setMode('compeek'); setVncPort('6081'); }}
-                    className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
+                    className={`flex-1 text-xs px-3 py-2 rounded-md transition-colors font-medium ${
                       mode === 'compeek' ? 'bg-compeek-accent text-white' : 'text-compeek-text-dim hover:text-compeek-text'
                     }`}
                   >
@@ -291,7 +291,7 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
                 <Tooltip content="View a remote desktop without AI control">
                   <button
                     onClick={() => { setMode('vnc-only'); setVncPort('6080'); }}
-                    className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
+                    className={`flex-1 text-xs px-3 py-2 rounded-md transition-colors font-medium ${
                       mode === 'vnc-only' ? 'bg-compeek-accent text-white' : 'text-compeek-text-dim hover:text-compeek-text'
                     }`}
                   >

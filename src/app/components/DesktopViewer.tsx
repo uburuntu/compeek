@@ -189,7 +189,7 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
               <Tooltip content="Show or hide the AI's click targets on the desktop">
                 <button
                   onClick={() => setOverlayVisible(!overlayVisible)}
-                  className={`text-xs px-2 py-1 rounded transition-colors ${
+                  className={`text-xs px-3 py-1.5 rounded transition-colors ${
                     overlayVisible ? 'bg-compeek-accent/20 text-compeek-accent' : 'text-compeek-text-dim hover:text-compeek-text'
                   }`}
                 >
@@ -199,7 +199,7 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
               <Tooltip content="Switch between live desktop view and screenshot snapshots">
                 <button
                   onClick={() => setUseVnc(!useVnc)}
-                  className="text-xs text-compeek-text-dim hover:text-compeek-text px-2 py-1 rounded"
+                  className="text-xs text-compeek-text-dim hover:text-compeek-text px-3 py-1.5 rounded"
                 >
                   {useVnc ? 'VNC' : 'Screenshots'}
                 </button>
@@ -210,7 +210,7 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
           <Tooltip content={isFullscreen ? 'Exit fullscreen' : 'View desktop in fullscreen'}>
             <button
               onClick={toggleFullscreen}
-              className={`text-xs px-2 py-1 rounded transition-colors ${
+              className={`text-xs px-3 py-1.5 rounded transition-colors ${
                 isFullscreen ? 'bg-compeek-accent/20 text-compeek-accent' : 'text-compeek-text-dim hover:text-compeek-text'
               }`}
             >
@@ -220,7 +220,7 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
           <Tooltip content="Open the remote desktop in a new browser tab">
             <button
               onClick={() => window.open(resolvedVncUrl, '_blank')}
-              className="text-xs text-compeek-text-dim hover:text-compeek-text px-2 py-1 rounded transition-colors"
+              className="text-xs text-compeek-text-dim hover:text-compeek-text px-3 py-1.5 rounded transition-colors"
             >
               New Tab ↗
             </button>

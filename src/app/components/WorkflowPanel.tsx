@@ -83,7 +83,7 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
             <Tooltip key={m.id} content={m.tip}>
               <button
                 onClick={() => setModel(m.id)}
-                className={`flex-1 text-xs px-2 py-1 rounded-md transition-colors font-medium ${
+                className={`flex-1 text-xs px-3 py-1.5 rounded-md transition-colors font-medium ${
                   model === m.id
                     ? 'bg-compeek-accent/20 text-compeek-accent border border-compeek-accent/40'
                     : 'text-compeek-text-dim hover:text-compeek-text border border-transparent'
@@ -177,7 +177,7 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
             <Tooltip key={p.label} content="Click to use this pre-written task" position="bottom">
               <button
                 onClick={() => setGoal(p.goal)}
-                className="text-[10px] px-2 py-1 rounded-full bg-compeek-bg border border-compeek-border text-compeek-text-dim hover:text-compeek-text hover:border-compeek-accent/50 transition-colors whitespace-nowrap"
+                className="text-[10px] px-3 py-1.5 rounded-full bg-compeek-bg border border-compeek-border text-compeek-text-dim hover:text-compeek-text hover:border-compeek-accent/50 transition-colors whitespace-nowrap"
               >
                 {p.label}
               </button>
