@@ -4,13 +4,13 @@ const CI = !!process.env.CI;
 const INTEGRATION = !!process.env.COMPEEK_E2E_INTEGRATION;
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: '.',
   fullyParallel: true,
   forbidOnly: CI,
   retries: CI ? 2 : 0,
   workers: CI ? 1 : undefined,
   reporter: CI ? 'github' : 'html',
-  outputDir: './e2e/test-results',
+  outputDir: './test-results',
 
   use: {
     baseURL: 'http://localhost:5173',
@@ -21,12 +21,12 @@ export default defineConfig({
   projects: [
     {
       name: 'ui',
-      testDir: './e2e/ui',
+      testDir: './ui',
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'integration',
-      testDir: './e2e/integration',
+      testDir: './integration',
       use: { ...devices['Desktop Chrome'] },
       ...(INTEGRATION ? {} : { testMatch: /^$/ }),
     },

@@ -39,10 +39,10 @@
     "docker:run": "docker run -p 3000:3000 -p 6080:6080 -p 5900:5900 --shm-size=512m -it compeek",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test --project=ui",
-    "test:e2e:integration": "COMPEEK_E2E_INTEGRATION=1 playwright test --project=integration",
-    "test:e2e:all": "COMPEEK_E2E_INTEGRATION=1 playwright test",
-    "test:e2e:ui": "playwright test --project=ui --ui"
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts --project=ui",
+    "test:e2e:integration": "COMPEEK_E2E_INTEGRATION=1 playwright test --config=e2e/playwright.config.ts --project=integration",
+    "test:e2e:all": "COMPEEK_E2E_INTEGRATION=1 playwright test --config=e2e/playwright.config.ts",
+    "test:e2e:ui": "playwright test --config=e2e/playwright.config.ts --project=ui --ui"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

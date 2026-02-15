@@ -159,11 +159,14 @@ compeek/
 │   ├── agent/             # Shared tools, types, prompts
 │   ├── app/               # React dashboard (Vite)
 │   ├── container/         # Express tool server (Docker)
+│   ├── mcp/               # MCP server
 │   └── lib/               # Logger
 ├── bin/compeek.mjs        # CLI (npx compeek)
+├── docker/                # Dockerfile, entrypoint, XFCE4 config
+├── examples/              # Demo form applications
+├── e2e/                   # Playwright end-to-end tests
+├── tests/                 # Unit tests (vitest)
 ├── install.sh             # One-line installer
-├── docker/                # Dockerfile + entrypoint
-├── target-app/            # Demo form application
 └── docker-compose.yml
 ```
 
