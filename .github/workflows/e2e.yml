@@ -1,0 +1,87 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e-ui:
+    name: UI Tests
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-ui
+          path: e2e/test-results/
+          retention-days: 7
+
+  e2e-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Start compeek container
+        run: |
+          docker run -d --name compeek-e2e \
+            -p 3001:3000 -p 6081:6080 \
+            --shm-size=512m \
+            ghcr.io/uburuntu/compeek:latest
+
+      - name: Wait for container
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/api/health; then
+              echo "Container is ready"
+              exit 0
+            fi
+            echo "Waiting for container... ($i/30)"
+            sleep 2
+          done
+          echo "Container failed to start"
+          docker logs compeek-e2e
+          exit 1
+
+      - run: npm run test:e2e:integration
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs compeek-e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-integration
+          path: e2e/test-results/
+          retention-days: 7
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f compeek-e2e || true

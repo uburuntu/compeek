@@ -38,7 +38,11 @@
     "docker:build": "docker build -f docker/Dockerfile -t compeek .",
     "docker:run": "docker run -p 3000:3000 -p 6080:6080 -p 5900:5900 --shm-size=512m -it compeek",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test --project=ui",
+    "test:e2e:integration": "COMPEEK_E2E_INTEGRATION=1 playwright test --project=integration",
+    "test:e2e:all": "COMPEEK_E2E_INTEGRATION=1 playwright test",
+    "test:e2e:ui": "playwright test --project=ui --ui"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
@@ -49,6 +53,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/cors": "^2.8.17",
