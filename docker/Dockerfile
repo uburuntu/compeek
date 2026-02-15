@@ -78,6 +78,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Install localtunnel globally for public access
 RUN npm install -g localtunnel
 
+# Install cloudflared for Cloudflare Tunnel (no account needed for quick tunnels)
+RUN curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$(dpkg --print-architecture) -o /usr/local/bin/cloudflared \
+    && chmod +x /usr/local/bin/cloudflared
+
 # Install noVNC from GitHub (apt package has version mismatches on 24.04)
 RUN git clone --depth 1 --branch v1.6.0 https://github.com/novnc/noVNC.git /opt/novnc
 

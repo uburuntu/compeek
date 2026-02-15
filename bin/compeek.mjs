@@ -137,6 +137,57 @@ function waitForHealth(host, port, timeout) {
   });
 }
 
+function waitForTunnelUrls(host, port, timeout) {
+  const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  let frame = 0;
+  let spinner;
+
+  if (isColorSupported) {
+    spinner = setInterval(() => {
+      process.stdout.write(`\r  ${c.cyan}${frames[frame]}${c.reset} Waiting for tunnel URLs...`);
+      frame = (frame + 1) % frames.length;
+    }, 80);
+  } else {
+    console.log('  Waiting for tunnel URLs...');
+  }
+
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const check = () => {
+      const req = http.get(`http://${host}:${port}/api/info`, { timeout: 2000 }, (res) => {
+        let body = '';
+        res.on('data', d => body += d);
+        res.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            if (data.tunnel?.apiUrl && data.tunnel?.vncUrl) {
+              if (spinner) {
+                clearInterval(spinner);
+                process.stdout.write(`\r  ${c.green}✓${c.reset} Tunnels ready               \n`);
+              }
+              return resolve(data.tunnel);
+            }
+          } catch { /* retry */ }
+          retry();
+        });
+      });
+      req.on('error', retry);
+      req.on('timeout', () => { req.destroy(); retry(); });
+    };
+    const retry = () => {
+      if (Date.now() - start > timeout) {
+        if (spinner) {
+          clearInterval(spinner);
+          process.stdout.write(`\r  ${c.yellow}!${c.reset} Tunnel timed out (local-only mode)\n`);
+        }
+        return resolve(null);
+      }
+      setTimeout(check, HEALTH_INTERVAL);
+    };
+    check();
+  });
+}
+
 function buildConnectionString(name, apiHost, apiPort, vncHost, vncPort, vncPassword) {
   const config = { name, type: 'compeek', apiHost, apiPort, vncHost, vncPort };
   if (vncPassword) config.vncPassword = vncPassword;
@@ -171,6 +222,12 @@ async function cmdStart(args) {
   const vncPassword = flags.password || crypto.randomBytes(6).toString('base64url').slice(0, 8);
   const sessionName = name.replace(CONTAINER_PREFIX, '').replace(/^(\d+)$/, 'Desktop $1');
 
+  // Tunnel provider: cloudflare by default, --no-tunnel to disable, --tunnel <provider> to override
+  const tunnelProvider = flags['no-tunnel'] ? 'none'
+    : typeof flags.tunnel === 'string' ? flags.tunnel
+    : flags.tunnel === true ? 'cloudflare'
+    : 'cloudflare';
+
   console.log('');
   console.log(`  ${c.bold}${c.cyan}compeek${c.reset}`);
   console.log('');
@@ -191,7 +248,7 @@ async function cmdStart(args) {
     `vnc:${c.white}${vncPort}${c.reset}`,
   ];
   if (flags.persist) info.push(`${c.green}persist${c.reset}`);
-  if (flags.tunnel)  info.push(`${c.yellow}tunnel${c.reset}`);
+  if (tunnelProvider !== 'none') info.push(`${c.yellow}${tunnelProvider}${c.reset}`);
 
   console.log(`  ${c.cyan}▸${c.reset} Starting ${c.bold}${name}${c.reset}  ${c.dim}${info.join(' · ')}${c.reset}`);
 
@@ -208,7 +265,7 @@ async function cmdStart(args) {
     `-e DESKTOP_MODE=${mode}`,
     `-e COMPEEK_SESSION_NAME="${sessionName}"`,
     `-e VNC_PASSWORD="${vncPassword}"`,
-    flags.tunnel ? '-e ENABLE_TUNNEL=true' : '',
+    `-e TUNNEL_PROVIDER=${tunnelProvider}`,
     flags.persist ? `-v ${name}-data:/home/compeek/data` : '',
     `--security-opt seccomp=unconfined`,
     IMAGE,
@@ -221,21 +278,47 @@ async function cmdStart(args) {
     process.exit(1);
   }
 
-  const connStr = buildConnectionString(sessionName, 'localhost', apiPort, 'localhost', vncPort, vncPassword);
-  const dashboardLink = `${DASHBOARD_URL}/#config=${connStr}`;
+  // Wait for tunnel URLs if tunneling is enabled
+  let tunnel = null;
+  if (tunnelProvider !== 'none' && mode !== 'headless') {
+    tunnel = await waitForTunnelUrls('localhost', apiPort, 30_000);
+  }
+
+  // Build connection strings
+  const localConnStr = buildConnectionString(sessionName, 'localhost', apiPort, 'localhost', vncPort, vncPassword);
+  let tunnelConnStr = null;
+  let dashboardLink;
+
+  if (tunnel) {
+    const apiUrl = new URL(tunnel.apiUrl);
+    const vncUrl = new URL(tunnel.vncUrl);
+    tunnelConnStr = buildConnectionString(
+      sessionName,
+      apiUrl.hostname, 443,
+      vncUrl.hostname, 443,
+      vncPassword,
+    );
+    dashboardLink = `${DASHBOARD_URL}/#config=${tunnelConnStr}`;
+  } else {
+    dashboardLink = `${DASHBOARD_URL}/#config=${localConnStr}`;
+  }
 
   console.log('');
   console.log(`  ${c.dim}──── Links ─────────────────────────────────────${c.reset}`);
   console.log('');
   console.log(`  ${c.bold}Dashboard${c.reset}   ${c.cyan}${dashboardLink}${c.reset}`);
-  console.log(`  ${c.dim}Tool API${c.reset}    http://localhost:${apiPort}`);
+  if (tunnel) {
+    console.log(`  ${c.dim}API${c.reset}         ${tunnel.apiUrl}`);
+    console.log(`  ${c.dim}noVNC${c.reset}       ${tunnel.vncUrl}`);
+  }
+  console.log(`  ${c.dim}Local API${c.reset}   http://localhost:${apiPort}`);
   if (mode !== 'headless') {
-    console.log(`  ${c.dim}noVNC${c.reset}       http://localhost:${vncPort}`);
+    console.log(`  ${c.dim}Local VNC${c.reset}   http://localhost:${vncPort}`);
     console.log(`  ${c.dim}Password${c.reset}    ${vncPassword}`);
   }
   console.log('');
   console.log(`  ${c.dim}──── Connection string ──────────────────────────${c.reset}`);
-  console.log(`  ${c.dim}${connStr}${c.reset}`);
+  console.log(`  ${c.dim}${tunnelConnStr || localConnStr}${c.reset}`);
   console.log('');
 
   if (flags.open) {
@@ -348,8 +431,15 @@ function parseFlags(args) {
     const arg = args[i];
     if (arg.startsWith('--')) {
       const key = arg.slice(2);
-      if (key === 'open' || key === 'no-pull' || key === 'persist' || key === 'tunnel') {
+      if (key === 'open' || key === 'no-pull' || key === 'persist' || key === 'no-tunnel') {
         flags[key] = true;
+      } else if (key === 'tunnel') {
+        // --tunnel (default provider) or --tunnel cloudflare / --tunnel localtunnel
+        if (i + 1 < args.length && !args[i + 1].startsWith('--')) {
+          flags[key] = args[++i];
+        } else {
+          flags[key] = true;
+        }
       } else if (i + 1 < args.length && !args[i + 1].startsWith('--')) {
         flags[key] = args[++i];
       }
@@ -398,7 +488,8 @@ switch (command) {
     --mode ${c.dim}<m>${c.reset} ${c.dim}......${c.reset} full ${c.dim}|${c.reset} browser ${c.dim}|${c.reset} minimal ${c.dim}|${c.reset} headless
     --persist ${c.dim}.......${c.reset} Mount volume for persistent data
     --password ${c.dim}<pw>${c.reset} ${c.dim}.${c.reset} Custom VNC password ${c.dim}(auto-generated if omitted)${c.reset}
-    --tunnel ${c.dim}........${c.reset} Enable localtunnel for remote access
+    --no-tunnel ${c.dim}.....${c.reset} Disable tunneling ${c.dim}(local-only mode)${c.reset}
+    --tunnel ${c.dim}<p>${c.reset} ${c.dim}.....${c.reset} cloudflare ${c.dim}(default)${c.reset} ${c.dim}|${c.reset} localtunnel
     --no-pull ${c.dim}.......${c.reset} Skip pulling latest Docker image
     --name ${c.dim}<n>${c.reset} ${c.dim}......${c.reset} Custom container name
     --api-port ${c.dim}<p>${c.reset} ${c.dim}.${c.reset} Host port for tool API

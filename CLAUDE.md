@@ -30,7 +30,7 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 
 **Multi-session** — the frontend manages multiple container connections via tabs. Each session has its own health-check polling and independent agent loop. Session configs persist in localStorage.
 
-**Docker** (`docker/Dockerfile`, `docker-compose.yml`) — Ubuntu 24.04 containers with Xvfb (1280x720), XFWM4, x11vnc, noVNC, Firefox (with uBlock Origin). Published to `ghcr.io/uburuntu/compeek`. Ports per container: 3000 (tool API), 6080 (noVNC), 5900 (VNC). Localtunnel available via `ENABLE_TUNNEL=true`.
+**Docker** (`docker/Dockerfile`, `docker-compose.yml`) — Ubuntu 24.04 containers with Xvfb (1280x720), XFWM4, x11vnc, noVNC, Firefox (with uBlock Origin). Published to `ghcr.io/uburuntu/compeek`. Ports per container: 3000 (tool API), 6080 (noVNC), 5900 (VNC). Tunneling enabled by default via Cloudflare Tunnel (`--no-tunnel` to disable, `--tunnel localtunnel` for localtunnel).
 
 **Desktop modes** — controlled by `DESKTOP_MODE` env var in `docker/entrypoint.sh`:
 - `full` (default) — Xvfb + XFWM4 + Tint2 + Firefox + target app
@@ -68,5 +68,6 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 - `DISPLAY` — X11 display for tool execution (default: `:1` in Docker)
 - `COMPEEK_SESSION_NAME` — display name for the container session
 - `DESKTOP_MODE` — `full | browser | minimal | headless` (default: `full`, container only)
+- `TUNNEL_PROVIDER` — `cloudflare | localtunnel | none` (default: `none`, set by CLI; container only)
 - `DASHBOARD_URL` — base URL for dashboard links in connection strings (default: `https://compeek.rmbk.me`)
 - `VITE_BASE_URL` — Vite base path (default: `./`, set to `/` for GitHub Pages)

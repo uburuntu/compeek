@@ -131,37 +131,54 @@ echo "  ${DASHBOARD_URL}/#config=${CONFIG_B64}"
 echo "========================================="
 echo ""
 
-# Start localtunnel only if explicitly enabled via ENABLE_TUNNEL=true
-if [ "$ENABLE_TUNNEL" = "true" ] && command -v lt &> /dev/null && [ "$DESKTOP_MODE" != "headless" ]; then
-  echo ""
-  echo "  Tunnel enabled — creating public URLs for this container."
-  echo "  The VNC desktop is password-protected (password: $VNC_PASSWORD)."
-  echo ""
-  echo "Starting localtunnel..."
+# Start tunnels (cloudflare or localtunnel)
+TUNNEL_PROVIDER="${TUNNEL_PROVIDER:-none}"
 
-  # Tunnel for tool API
-  lt --port ${API_PORT} 2>&1 | while IFS= read -r line; do
-    if echo "$line" | grep -q "https://"; then
-      TOOL_URL=$(echo "$line" | grep -oP 'https://[^ ]+')
-      echo ""
-      echo "========================================="
-      echo "  Remote access (localtunnel)"
-      echo "========================================="
-      echo "  Tool API : $TOOL_URL"
-      echo "========================================="
-      echo ""
-    fi
-  done &
+if [ "$TUNNEL_PROVIDER" != "none" ] && [ "$DESKTOP_MODE" != "headless" ]; then
+  echo "[${STEP}] Starting ${TUNNEL_PROVIDER} tunnels..."
+  STEP=$((STEP + 1))
 
-  # Tunnel for noVNC
-  lt --port ${VNC_PORT} 2>&1 | while IFS= read -r line; do
-    if echo "$line" | grep -q "https://"; then
-      VNC_URL=$(echo "$line" | grep -oP 'https://[^ ]+')
-      echo "  noVNC    : $VNC_URL"
-    fi
-  done &
+  if [ "$TUNNEL_PROVIDER" = "cloudflare" ] && command -v cloudflared &> /dev/null; then
+    # Cloudflare Quick Tunnel — no account needed, uses *.trycloudflare.com
+    cloudflared tunnel --url http://localhost:${API_PORT} --no-autoupdate 2>&1 | while IFS= read -r line; do
+      url=$(echo "$line" | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' || true)
+      if [ -n "$url" ] && [ ! -f /tmp/tunnel-api.url ]; then
+        echo "$url" > /tmp/tunnel-api.url
+        echo "  API tunnel: $url"
+      fi
+    done &
+
+    cloudflared tunnel --url http://localhost:${VNC_PORT} --no-autoupdate 2>&1 | while IFS= read -r line; do
+      url=$(echo "$line" | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' || true)
+      if [ -n "$url" ] && [ ! -f /tmp/tunnel-vnc.url ]; then
+        echo "$url" > /tmp/tunnel-vnc.url
+        echo "  VNC tunnel: $url"
+      fi
+    done &
+
+  elif [ "$TUNNEL_PROVIDER" = "localtunnel" ] && command -v lt &> /dev/null; then
+    # Localtunnel — uses *.loca.lt
+    lt --port ${API_PORT} 2>&1 | while IFS= read -r line; do
+      url=$(echo "$line" | grep -oE 'https://[^ ]+' || true)
+      if [ -n "$url" ] && [ ! -f /tmp/tunnel-api.url ]; then
+        echo "$url" > /tmp/tunnel-api.url
+        echo "  API tunnel: $url"
+      fi
+    done &
+
+    lt --port ${VNC_PORT} 2>&1 | while IFS= read -r line; do
+      url=$(echo "$line" | grep -oE 'https://[^ ]+' || true)
+      if [ -n "$url" ] && [ ! -f /tmp/tunnel-vnc.url ]; then
+        echo "$url" > /tmp/tunnel-vnc.url
+        echo "  VNC tunnel: $url"
+      fi
+    done &
+
+  else
+    echo "  Warning: ${TUNNEL_PROVIDER} binary not found, skipping tunnels."
+  fi
 elif [ "$DESKTOP_MODE" = "headless" ]; then
-  echo "Headless mode — VNC skipped."
+  echo "Headless mode — tunnels skipped."
 fi
 
 # Wait for tool server

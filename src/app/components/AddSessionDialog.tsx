@@ -29,7 +29,10 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch(`http://${h}:${p}/api/health`, { signal: AbortSignal.timeout(5000) });
+      const isLocal = h === 'localhost' || h === '127.0.0.1';
+      const healthProto = isLocal ? 'http' : 'https';
+      const healthShowPort = isLocal || (healthProto === 'https' && parseInt(p) !== 443);
+      const res = await fetch(`${healthProto}://${h}${healthShowPort ? `:${p}` : ''}/api/health`, { signal: AbortSignal.timeout(5000) });
       setTestResult(res.ok ? 'ok' : 'fail');
     } catch {
       setTestResult('fail');

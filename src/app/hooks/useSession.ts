@@ -30,7 +30,10 @@ export function useSession(config: SessionConfig, apiKey?: string): SessionState
   const apiKeyRef = useRef(apiKey);
   apiKeyRef.current = apiKey;
 
-  const containerUrl = `http://${config.apiHost}:${config.apiPort}`;
+  const isLocal = config.apiHost === 'localhost' || config.apiHost === '127.0.0.1';
+  const proto = isLocal ? 'http' : 'https';
+  const showPort = isLocal || (proto === 'https' && config.apiPort !== 443);
+  const containerUrl = `${proto}://${config.apiHost}${showPort ? `:${config.apiPort}` : ''}`;
 
   // Health-check polling for container status
   useEffect(() => {

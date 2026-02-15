@@ -17,7 +17,7 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
   const [overlayVisible, setOverlayVisible] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const resolvedVncUrl = vncUrl || `http://${window.location.hostname}:6080/compeek-vnc.html?autoconnect=true&show_dot=true`;
+  const resolvedVncUrl = vncUrl || `${window.location.protocol}//${window.location.hostname}:6080/compeek-vnc.html?autoconnect=true&show_dot=true`;
   const isVncOnly = sessionType === 'vnc-only';
 
   const toggleFullscreen = useCallback(() => {
