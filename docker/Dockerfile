@@ -120,8 +120,9 @@ RUN npm ci
 # Copy source and build the container server
 COPY tsconfig.json ./
 COPY src/container/ ./src/container/
-COPY src/agent/tools.ts src/agent/types.ts src/agent/prompts.ts ./src/agent/
+COPY src/agent/tools.ts src/agent/types.ts src/agent/prompts.ts src/agent/text-editor.ts ./src/agent/
 COPY src/lib/ ./src/lib/
+COPY src/mcp/ ./src/mcp/
 
 RUN npx tsc --outDir dist
 

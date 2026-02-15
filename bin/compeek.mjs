@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
 // compeek CLI — zero dependencies, Node.js built-ins only
-// Usage: npx compeek [start|stop|status|logs|open]
+// Usage: npx compeek [start|stop|status|logs|open|mcp]
 
 import { execSync, spawn } from 'node:child_process';
 import http from 'node:http';
 import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 const IMAGE = 'ghcr.io/uburuntu/compeek:latest';
 const CONTAINER_PREFIX = 'compeek-';
@@ -207,6 +209,33 @@ function openUrl(url) {
 
 // ── Commands ─────────────────────────────────────────────
 
+function detectRunningContainer() {
+  const containers = listContainers().filter(c => c.status.startsWith('Up'));
+  if (containers.length === 0) return null;
+
+  const name = containers[0].name;
+  const inspect = run(`docker inspect --format '{{json .NetworkSettings.Ports}}' ${name}`, { allowFail: true });
+  if (!inspect) return null;
+
+  try {
+    const ports = JSON.parse(inspect);
+    const apiBinding = ports['3000/tcp']?.[0];
+    const apiPort = apiBinding ? parseInt(apiBinding.HostPort) : 3001;
+
+    // Extract VNC_PASSWORD from container env
+    const envStr = run(`docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' ${name}`, { allowFail: true });
+    let apiToken;
+    if (envStr) {
+      const match = envStr.match(/^VNC_PASSWORD=(.+)$/m);
+      if (match) apiToken = match[1];
+    }
+
+    return { name, apiPort, apiToken, containerUrl: `http://localhost:${apiPort}` };
+  } catch {
+    return null;
+  }
+}
+
 async function cmdStart(args) {
   if (!hasDocker()) {
     console.error(`${c.red}Docker is not available.${c.reset} Install Docker first: https://docs.docker.com/get-docker/`);
@@ -320,6 +349,17 @@ async function cmdStart(args) {
   console.log(`  ${c.dim}──── Connection string ──────────────────────────${c.reset}`);
   console.log(`  ${c.dim}${tunnelConnStr || localConnStr}${c.reset}`);
   console.log('');
+  console.log(`  ${c.dim}──── MCP ───────────────────────────────────────${c.reset}`);
+  console.log('');
+  if (tunnel) {
+    console.log(`  ${c.dim}Streamable HTTP${c.reset}  ${tunnel.apiUrl}/mcp`);
+  }
+  console.log(`  ${c.dim}Local MCP${c.reset}        http://localhost:${apiPort}/mcp`);
+  console.log(`  ${c.dim}stdio proxy${c.reset}      npx @rmbk/compeek mcp`);
+  console.log('');
+  console.log(`  ${c.dim}Claude Code config (~/.claude/settings.json):${c.reset}`);
+  console.log(`  ${c.dim}{ "mcpServers": { "compeek": { "command": "npx", "args": ["-y", "@rmbk/compeek", "mcp"] } } }${c.reset}`);
+  console.log('');
 
   if (flags.open) {
     openUrl(dashboardLink);
@@ -384,6 +424,94 @@ function cmdLogs(args) {
   child.on('exit', code => process.exit(code || 0));
 }
 
+async function cmdMcp(args) {
+  const flags = parseFlags(args);
+  let containerUrl = flags['container-url'];
+  let apiToken = flags['api-token'];
+  let startedContainerName = null;
+
+  if (!containerUrl) {
+    // Auto-detect running container
+    const detected = detectRunningContainer();
+    if (detected) {
+      containerUrl = detected.containerUrl;
+      apiToken = apiToken || detected.apiToken;
+      process.stderr.write(`Using container ${detected.name} at ${containerUrl}\n`);
+    } else if (flags.start) {
+      // Auto-start a container
+      if (!hasDocker()) {
+        process.stderr.write('Docker is not available. Specify --container-url or install Docker.\n');
+        process.exit(1);
+      }
+
+      const name = flags.name || findNextName();
+      const { apiPort } = findNextPorts();
+      const vncPassword = flags.password || crypto.randomBytes(24).toString('base64url').slice(0, 24);
+      const mode = flags.mode || 'full';
+
+      run(`docker rm -f ${name}`, { allowFail: true });
+      run([
+        'docker run -d',
+        `--name ${name}`,
+        `-p ${apiPort}:3000`,
+        `--shm-size=512m`,
+        `-e DISPLAY=:1`,
+        `-e DESKTOP_MODE=${mode}`,
+        `-e COMPEEK_SESSION_NAME="${name}"`,
+        `-e VNC_PASSWORD="${vncPassword}"`,
+        `-e TUNNEL_PROVIDER=none`,
+        flags.persist ? `-v ${name}-data:/home/compeek/data` : '',
+        `--security-opt seccomp=unconfined`,
+        IMAGE,
+      ].filter(Boolean).join(' '));
+
+      process.stderr.write(`Starting container ${name}...\n`);
+      try {
+        await waitForHealth('localhost', apiPort, HEALTH_TIMEOUT);
+      } catch {
+        process.stderr.write('Container did not start. Check logs: npx compeek logs\n');
+        process.exit(1);
+      }
+
+      containerUrl = `http://localhost:${apiPort}`;
+      apiToken = vncPassword;
+      startedContainerName = name;
+      process.stderr.write(`Container ${name} ready at ${containerUrl}\n`);
+    } else {
+      process.stderr.write('No running compeek container found.\n');
+      process.stderr.write('Start one with: npx @rmbk/compeek start\n');
+      process.stderr.write('Or use: npx @rmbk/compeek mcp --start\n');
+      process.exit(1);
+    }
+  }
+
+  // Resolve path to the compiled stdio entrypoint
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const stdioPath = join(__dirname, '..', 'dist', 'mcp', 'stdio.js');
+
+  const mcpArgs = ['--container-url', containerUrl];
+  if (apiToken) mcpArgs.push('--api-token', apiToken);
+
+  const child = spawn('node', [stdioPath, ...mcpArgs], {
+    stdio: ['inherit', 'inherit', 'inherit'],
+  });
+
+  // Clean up auto-started container on exit
+  if (startedContainerName && !flags.persist) {
+    const cleanup = () => {
+      try {
+        run(`docker rm -f ${startedContainerName}`, { allowFail: true });
+        process.stderr.write(`Container ${startedContainerName} removed.\n`);
+      } catch { /* ignore */ }
+    };
+    process.on('exit', cleanup);
+    process.on('SIGINT', () => { child.kill('SIGINT'); });
+    process.on('SIGTERM', () => { child.kill('SIGTERM'); });
+  }
+
+  child.on('exit', code => process.exit(code || 0));
+}
+
 function cmdOpen(args) {
   const target = args[0];
   let name;
@@ -431,7 +559,7 @@ function parseFlags(args) {
     const arg = args[i];
     if (arg.startsWith('--')) {
       const key = arg.slice(2);
-      if (key === 'open' || key === 'no-pull' || key === 'persist' || key === 'no-tunnel') {
+      if (key === 'open' || key === 'no-pull' || key === 'persist' || key === 'no-tunnel' || key === 'start') {
         flags[key] = true;
       } else if (key === 'tunnel') {
         // --tunnel (default provider) or --tunnel cloudflare / --tunnel localtunnel
@@ -468,6 +596,9 @@ switch (command) {
   case 'open':
     cmdOpen(rest);
     break;
+  case 'mcp':
+    cmdMcp(rest);
+    break;
   case '--help':
   case '-h':
   case 'help':
@@ -482,6 +613,7 @@ switch (command) {
     status ${c.dim}...........${c.reset} List running containers
     logs  ${c.dim}[name]${c.reset} ${c.dim}....${c.reset} Follow container logs
     open  ${c.dim}[name]${c.reset} ${c.dim}....${c.reset} Open dashboard in browser
+    mcp ${c.dim}..............${c.reset} Start MCP stdio server ${c.dim}(for Claude Code, Cursor, etc.)${c.reset}
 
   ${c.bold}Options${c.reset}
     --open ${c.dim}..........${c.reset} Open dashboard after start
@@ -494,6 +626,11 @@ switch (command) {
     --name ${c.dim}<n>${c.reset} ${c.dim}......${c.reset} Custom container name
     --api-port ${c.dim}<p>${c.reset} ${c.dim}.${c.reset} Host port for tool API
     --vnc-port ${c.dim}<p>${c.reset} ${c.dim}.${c.reset} Host port for noVNC
+
+  ${c.bold}MCP Options${c.reset}
+    --container-url ${c.dim}<u>${c.reset}  Container API URL ${c.dim}(default: auto-detect)${c.reset}
+    --api-token ${c.dim}<t>${c.reset} ${c.dim}....${c.reset} Bearer token for container auth
+    --start ${c.dim}.........${c.reset} Auto-launch container if none running
 `);
     break;
   default:

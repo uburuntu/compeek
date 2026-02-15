@@ -26,7 +26,8 @@
     "compeek": "bin/compeek.mjs"
   },
   "files": [
-    "bin/"
+    "bin/",
+    "dist/"
   ],
   "scripts": {
     "dev:client": "vite",
@@ -41,9 +42,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

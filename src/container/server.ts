@@ -2,9 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
+import { randomUUID } from 'crypto';
 import { executeAction } from '../agent/tools.js';
 import { log } from '../lib/logger.js';
 import type { ComputerAction } from '../agent/types.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { createCompeekMcpServer } from '../mcp/server.js';
+import { createDirectExecutor } from '../mcp/executors.js';
 
 const app = express();
 app.use(cors());
@@ -72,7 +76,70 @@ app.post('/api/bash', requireAuth, (req, res) => {
   }
 });
 
+// ── MCP Streamable HTTP endpoint (always enabled) ─────────────────
+const mcpTransports = new Map<string, StreamableHTTPServerTransport>();
+
+app.post('/mcp', requireAuth, async (req, res) => {
+  // Check for existing session
+  const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
+  if (sessionId && mcpTransports.has(sessionId)) {
+    const transport = mcpTransports.get(sessionId)!;
+    await transport.handleRequest(req, res, req.body);
+    return;
+  }
+
+  // New session — create transport and server
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => randomUUID(),
+  });
+
+  transport.onclose = () => {
+    const sid = transport.sessionId;
+    if (sid) {
+      mcpTransports.delete(sid);
+      log.info('mcp', `Session ${sid} closed`);
+    }
+  };
+
+  const mcpServer = createCompeekMcpServer({
+    executor: createDirectExecutor(),
+    serverName: 'compeek-container',
+  });
+
+  await mcpServer.connect(transport);
+  await transport.handleRequest(req, res, req.body);
+
+  if (transport.sessionId) {
+    mcpTransports.set(transport.sessionId, transport);
+    log.info('mcp', `Session ${transport.sessionId} started`);
+  }
+});
+
+app.get('/mcp', requireAuth, async (req, res) => {
+  const sessionId = req.headers['mcp-session-id'] as string | undefined;
+  if (!sessionId || !mcpTransports.has(sessionId)) {
+    res.status(400).json({ error: 'Invalid or missing mcp-session-id header' });
+    return;
+  }
+  const transport = mcpTransports.get(sessionId)!;
+  await transport.handleRequest(req, res);
+});
+
+app.delete('/mcp', requireAuth, async (req, res) => {
+  const sessionId = req.headers['mcp-session-id'] as string | undefined;
+  if (sessionId && mcpTransports.has(sessionId)) {
+    const transport = mcpTransports.get(sessionId)!;
+    await transport.handleRequest(req, res);
+    mcpTransports.delete(sessionId);
+    log.info('mcp', `Session ${sessionId} deleted`);
+  } else {
+    res.status(400).json({ error: 'Invalid or missing mcp-session-id header' });
+  }
+});
+
 const PORT = parseInt(process.env.PORT || '3000');
 app.listen(PORT, '0.0.0.0', () => {
   log.info('container', `Tool server listening on port ${PORT}`);
+  log.info('container', `MCP endpoint available at /mcp`);
 });
