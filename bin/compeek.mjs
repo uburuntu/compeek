@@ -219,7 +219,7 @@ async function cmdStart(args) {
   const apiPort = parseInt(flags['api-port']) || defaultApi;
   const vncPort = parseInt(flags['vnc-port']) || defaultVnc;
   const mode = flags.mode || 'full';
-  const vncPassword = flags.password || crypto.randomBytes(6).toString('base64url').slice(0, 8);
+  const vncPassword = flags.password || crypto.randomBytes(24).toString('base64url').slice(0, 24);
   const sessionName = name.replace(CONTAINER_PREFIX, '').replace(/^(\d+)$/, 'Desktop $1');
 
   // Tunnel provider: cloudflare by default, --no-tunnel to disable, --tunnel <provider> to override

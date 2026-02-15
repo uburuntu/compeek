@@ -10,6 +10,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Bearer token auth for dangerous endpoints (POST /api/tool, /api/bash)
+// Uses the session password (same as VNC password) as the shared secret
+const API_TOKEN = process.env.API_TOKEN || process.env.VNC_PASSWORD || '';
+
+function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (!API_TOKEN) return next(); // no password set = local-only, skip auth
+  const auth = req.headers.authorization;
+  if (auth === `Bearer ${API_TOKEN}`) return next();
+  res.status(401).json({ error: 'Unauthorized — invalid or missing Bearer token' });
+}
+
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
@@ -35,7 +46,7 @@ app.get('/api/info', (_req, res) => {
 });
 
 // Execute a computer-use tool action (screenshot, click, type, etc.)
-app.post('/api/tool', async (req, res) => {
+app.post('/api/tool', requireAuth, async (req, res) => {
   try {
     const action = req.body as ComputerAction;
     const result = await executeAction(action);
@@ -46,7 +57,7 @@ app.post('/api/tool', async (req, res) => {
 });
 
 // Execute a bash command
-app.post('/api/bash', (req, res) => {
+app.post('/api/bash', requireAuth, (req, res) => {
   try {
     const { command } = req.body;
     const output = execSync(command, {

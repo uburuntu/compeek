@@ -5,10 +5,11 @@ DESKTOP_MODE="${DESKTOP_MODE:-full}"
 DASHBOARD_URL="${DASHBOARD_URL:-https://compeek.rmbk.me}"
 export GTK_THEME=Adwaita:dark
 
-# Auto-generate VNC password if not provided
+# Auto-generate session password if not provided (used for both VNC and API auth)
 if [ -z "$VNC_PASSWORD" ]; then
-  VNC_PASSWORD=$(head -c 12 /dev/urandom | base64 | tr -d '/+=' | head -c 8)
+  VNC_PASSWORD=$(head -c 32 /dev/urandom | base64 | tr -d '/+=' | head -c 24)
 fi
+export API_TOKEN="$VNC_PASSWORD"
 
 echo ""
 echo "========================================="

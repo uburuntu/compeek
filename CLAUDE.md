@@ -24,9 +24,12 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 
 **Browser-driven, two-layer system:**
 
-1. **Frontend + Agent** (`src/app/`) — React + Vite + TailwindCSS. The agent loop (`src/app/agent/loop.ts`) runs in the browser, calling the Anthropic API directly via `@anthropic-ai/sdk` with `dangerouslyAllowBrowser: true`. Uses `computer_20251124` / `computer_20250124`, `bash_20250124`, and `text_editor_20250728` tools. Extended thinking enabled with 10240 token budget. Tool results are fetched from container via HTTP POST.
+1. **Frontend + Agent** (`src/app/`) — React + Vite + TailwindCSS. The agent loop (`src/app/agent/loop.ts`) runs in the browser, calling the Anthropic API directly via `@anthropic-ai/sdk` with `dangerouslyAllowBrowser: true`. Extended thinking enabled with 10240 token budget. Tool results are fetched from container via HTTP POST. Three tools:
+   - `computer` — `computer_20251124` for Opus (supports `enable_zoom`), `computer_20250124` for Sonnet/Haiku
+   - `bash` — `bash_20250124`
+   - `str_replace_based_edit_tool` — `text_editor_20250728` (view, create, str_replace, insert via bash/python)
 
-2. **Container** (`src/container/server.ts`) — Minimal Express server inside Docker. Endpoints: `GET /api/health`, `GET /api/info`, `POST /api/tool` (executes xdotool/scrot actions), `POST /api/bash`. No Anthropic API calls, no WebSocket, no state.
+2. **Container** (`src/container/server.ts`) — Minimal Express server inside Docker. Endpoints: `GET /api/health`, `GET /api/info` (returns session name + tunnel URLs), `POST /api/tool` (executes xdotool/scrot actions), `POST /api/bash`. No Anthropic API calls, no WebSocket, no state.
 
 **Multi-session** — the frontend manages multiple container connections via tabs. Each session has its own health-check polling and independent agent loop. Session configs persist in localStorage.
 
@@ -45,10 +48,10 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 - **Browser-native agent**: The AI loop in `src/app/agent/loop.ts` calls Anthropic API from the browser. Tool execution is remote via `POST /api/tool` and `POST /api/bash` to the container's tool server.
 - **Event-driven**: Agent activity produces `AgentEvent` objects (types in `src/agent/types.ts`). Events flow directly from the agent loop to React state via callbacks — no WebSocket layer.
 - **Tool execution**: `src/agent/tools.ts` wraps xdotool/scrot via `child_process.execSync`. Each action returns `{ base64?, error? }`. Used by the container server.
-- **Prompts**: `src/agent/prompts.ts` — `SYSTEM_PROMPT_BASE`, `FORM_FILL_PROMPT`, `GENERAL_WORKFLOW_PROMPT`. Imported in the browser via Vite `@/` alias.
+- **Prompts**: `src/agent/prompts.ts` — `SYSTEM_PROMPT_BASE`, `FORM_FILL_PROMPT`, `GENERAL_WORKFLOW_PROMPT`, `VALIDATION_PROMPT`, `DOCUMENT_EXTRACTION_PROMPT`. Imported in the browser via Vite `@/` alias.
 - **Session management**: `src/app/hooks/useSession.ts` (per-session state + agent loop), `src/app/hooks/useSessionManager.ts` (CRUD + localStorage). API key stored in browser via `useSettings.ts`.
 - **Connection strings**: `src/app/App.tsx` reads `#config=` from URL hash on mount. `src/app/components/AddSessionDialog.tsx` has a paste box for base64 strings or dashboard URLs.
-- **CLI**: `bin/compeek.mjs` — zero-dep Node.js CLI (`start`, `stop`, `status`, `logs`, `open`). Published as `@rmbk/compeek` on npm, run via `npx @rmbk/compeek`.
+- **CLI**: `bin/compeek.mjs` — zero-dep Node.js CLI (`start`, `stop`, `status`, `logs`, `open`). Published as `@rmbk/compeek` on npm, run via `npx @rmbk/compeek`. The `start` command defaults to Cloudflare tunnels (`--no-tunnel` to disable, `--tunnel localtunnel` for localtunnel). Supports `--persist` for data volume, `--mode`, `--password`, `--open`.
 - **Tailwind theme**: Custom `compeek-*` color tokens in `tailwind.config.js` (dark theme).
 
 ## Build details
@@ -68,6 +71,7 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 - `DISPLAY` — X11 display for tool execution (default: `:1` in Docker)
 - `COMPEEK_SESSION_NAME` — display name for the container session
 - `DESKTOP_MODE` — `full | browser | minimal | headless` (default: `full`, container only)
+- `VNC_PASSWORD` — custom VNC password (auto-generated if omitted, container only)
 - `TUNNEL_PROVIDER` — `cloudflare | localtunnel | none` (default: `none`, set by CLI; container only)
 - `DASHBOARD_URL` — base URL for dashboard links in connection strings (default: `https://compeek.rmbk.me`)
 - `VITE_BASE_URL` — Vite base path (default: `./`, set to `/` for GitHub Pages)

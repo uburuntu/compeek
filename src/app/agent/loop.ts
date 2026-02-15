@@ -13,6 +13,7 @@ export interface BrowserWorkflowRequest {
   goal: string;
   apiKey: string;
   containerUrl: string;
+  apiToken?: string;
   model?: string;
   context?: Record<string, unknown>;
   documentBase64?: string;
@@ -26,19 +27,23 @@ function makeEvent(type: AgentEvent['type'], data: AgentEvent['data']): AgentEve
   return { type, timestamp: Date.now(), data };
 }
 
-async function executeToolRemote(containerUrl: string, action: ComputerAction): Promise<{ base64?: string; error?: string }> {
+async function executeToolRemote(containerUrl: string, action: ComputerAction, apiToken?: string): Promise<{ base64?: string; error?: string }> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (apiToken) headers['Authorization'] = `Bearer ${apiToken}`;
   const res = await fetch(`${containerUrl}/api/tool`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(action),
   });
   return res.json();
 }
 
-async function executeBashRemote(containerUrl: string, command: string): Promise<{ output?: string; error?: string }> {
+async function executeBashRemote(containerUrl: string, command: string, apiToken?: string): Promise<{ output?: string; error?: string }> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (apiToken) headers['Authorization'] = `Bearer ${apiToken}`;
   const res = await fetch(`${containerUrl}/api/bash`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ command }),
   });
   return res.json();
@@ -268,7 +273,7 @@ export async function agentLoop(
             description: describeAction(action),
           }));
 
-          const result = await executeToolRemote(request.containerUrl, action);
+          const result = await executeToolRemote(request.containerUrl, action, request.apiToken);
 
           if (result.error) {
             toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result.error, is_error: true });
@@ -284,7 +289,7 @@ export async function agentLoop(
           }
         } else if (block.name === 'bash') {
           const input = block.input as { command: string };
-          const result = await executeBashRemote(request.containerUrl, input.command);
+          const result = await executeBashRemote(request.containerUrl, input.command, request.apiToken);
 
           if (result.error) {
             toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${result.error}`, is_error: true });
@@ -302,7 +307,7 @@ export async function agentLoop(
           }));
 
           const command = buildTextEditorCommand(input);
-          const result = await executeBashRemote(request.containerUrl, command);
+          const result = await executeBashRemote(request.containerUrl, command, request.apiToken);
 
           if (result.error) {
             toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: `Error: ${result.error}`, is_error: true });
