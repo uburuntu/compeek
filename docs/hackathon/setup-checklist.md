@@ -9,7 +9,7 @@
 ## Local Linux Container
 
 ```bash
-npx @rmbk/compeek start --open --name linux-demo
+npx @rmbk/compeek@latest start --open --name linux-demo
 ```
 
 - [ ] Container starts and health check passes
@@ -21,7 +21,7 @@ npx @rmbk/compeek start --open --name linux-demo
 
 ```bash
 # On the remote Linux server (requires /dev/kvm):
-npx @rmbk/compeek start --os windows --tunnel --name windows-demo
+npx @rmbk/compeek@latest start --os windows --tunnel --name windows-demo
 ```
 
 - [ ] Remote server has KVM support (`ls /dev/kvm`)
@@ -34,10 +34,10 @@ npx @rmbk/compeek start --os windows --tunnel --name windows-demo
 
 ```bash
 # Start a second Linux container for MCP:
-npx @rmbk/compeek start --name mcp-demo
+npx @rmbk/compeek@latest start --name mcp-demo
 
 # In Claude Code settings, add MCP server:
-npx @rmbk/compeek mcp --container-url http://localhost:3002
+npx @rmbk/compeek@latest mcp --container-url http://localhost:3002
 ```
 
 - [ ] MCP container running

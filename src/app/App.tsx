@@ -51,9 +51,8 @@ export default function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Show welcome guide when no sessions are connected
-  const allDisconnected = sessions.every(s => sessionStatuses[s.id] !== 'connected');
-  const showWelcome = allDisconnected && sessions.length <= 1;
+  // Show welcome guide when Home tab is active
+  const showHome = activeSessionId === '' || !sessions.find(s => s.id === activeSessionId);
 
   return (
     <div className="h-screen flex flex-col bg-compeek-bg text-compeek-text">
@@ -113,26 +112,24 @@ export default function App() {
         onAdd={() => setShowAddDialog(true)}
       />
 
-      {/* Main content */}
-      {showWelcome ? (
-        <WelcomeGuide
-          onAddSession={() => setShowAddDialog(true)}
-          onOpenSettings={() => setShowSettings(true)}
-          hasApiKey={!!settings.apiKey}
-          hasConnectedSession={connectedCount > 0}
+      {/* Main content — Home and sessions always coexist */}
+      <WelcomeGuide
+        visible={showHome}
+        onAddSession={() => setShowAddDialog(true)}
+        onOpenSettings={() => setShowSettings(true)}
+        hasApiKey={!!settings.apiKey}
+        hasConnectedSession={connectedCount > 0}
+      />
+      {sessions.map(session => (
+        <SessionView
+          key={session.id}
+          config={session}
+          visible={session.id === activeSessionId}
+          apiKey={settings.apiKey || undefined}
+          initialModel={settings.lastModel}
+          onStatusChange={handleStatusChange(session.id)}
         />
-      ) : (
-        sessions.map(session => (
-          <SessionView
-            key={session.id}
-            config={session}
-            visible={session.id === activeSessionId}
-            apiKey={settings.apiKey || undefined}
-            initialModel={settings.lastModel}
-            onStatusChange={handleStatusChange(session.id)}
-          />
-        ))
-      )}
+      ))}
 
       {/* Dialogs */}
       <AddSessionDialog

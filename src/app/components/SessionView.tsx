@@ -33,6 +33,10 @@ export default function SessionView({ config, visible, apiKey, initialModel, onS
   const latestStatusEvent = [...session.events].reverse().find(e => e.type === 'status' && e.data.step);
   const currentStep = latestStatusEvent?.data.step || null;
 
+  // Track token usage from tokens events
+  const latestTokensEvent = [...session.events].reverse().find(e => e.type === 'tokens');
+  const tokenUsage = latestTokensEvent ? { input: latestTokensEvent.data.inputTokens, output: latestTokensEvent.data.outputTokens } : null;
+
   // Update seen thinking count when tab is active
   useEffect(() => {
     if (activeTab === 'thinking') {
@@ -65,6 +69,7 @@ export default function SessionView({ config, visible, apiKey, initialModel, onS
           sessionType={config.type}
           currentStep={currentStep}
           modelName={modelLabel}
+          tokenUsage={tokenUsage}
         />
       </div>
 

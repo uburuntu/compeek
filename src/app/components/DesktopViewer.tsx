@@ -10,6 +10,7 @@ interface Props {
   sessionType?: 'compeek' | 'vnc-only';
   currentStep?: number | null;
   modelName?: string | null;
+  tokenUsage?: { input: number; output: number } | null;
 }
 
 function formatElapsed(seconds: number): string {
@@ -18,7 +19,13 @@ function formatElapsed(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, sessionType, currentStep, modelName }: Props) {
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+
+export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, sessionType, currentStep, modelName, tokenUsage }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [useVnc, setUseVnc] = useState(true);
@@ -74,7 +81,7 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const scaleX = canvas.width / 1280;
-    const scaleY = canvas.height / 720;
+    const scaleY = canvas.height / 768;
 
     // Draw action indicator
     if (action.params?.coordinate) {
@@ -265,6 +272,12 @@ export default function DesktopViewer({ screenshot, action, isRunning, vncUrl, s
                 formatElapsed(elapsed),
               ].filter(Boolean).join(' \u00b7 ')}
             </span>
+            {tokenUsage && (tokenUsage.input > 0 || tokenUsage.output > 0) && (
+              <span className="text-[10px] text-compeek-text-dim/80 font-mono flex items-center gap-1.5">
+                <span>{formatTokens(tokenUsage.input)}{'↑'}</span>
+                <span>{formatTokens(tokenUsage.output)}{'↓'}</span>
+              </span>
+            )}
           </div>
         )}
       </div>

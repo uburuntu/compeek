@@ -26,6 +26,19 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
   const testHostRef = useRef('');
   const testPortRef = useRef('');
 
+  // CLI configurator state
+  const [cliOs, setCliOs] = useState<'linux' | 'windows' | 'macos'>('linux');
+  const [cliPersist, setCliPersist] = useState(false);
+  const [cliOpen, setCliOpen] = useState(true);
+
+  const cliCommand = (() => {
+    const parts = ['npx @rmbk/compeek@latest start'];
+    if (cliOs !== 'linux') parts.push(`--os ${cliOs}`);
+    if (cliPersist) parts.push('--persist');
+    if (cliOpen) parts.push('--open');
+    return parts.join(' ');
+  })();
+
   const doTest = async (h: string, p: string) => {
     setTesting(true);
     setTestResult(null);
@@ -102,6 +115,9 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
     setShowDocker(false);
     setVncPassword('');
     setOsType('linux');
+    setCliOs('linux');
+    setCliPersist(false);
+    setCliOpen(true);
     onClose();
   };
 
@@ -110,20 +126,66 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
       <div className="bg-compeek-surface border border-compeek-border rounded-xl shadow-2xl w-[480px] max-h-[90vh] overflow-y-auto p-6 animate-dialog-in" onClick={e => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-compeek-text mb-5">Connect a Desktop</h2>
 
-        {/* Step 1: Start a desktop */}
+        {/* Step 1: Start a desktop with CLI configurator */}
         <div className="mb-5">
           <div className="flex items-center gap-2.5 mb-3">
             <div className="w-6 h-6 rounded-full bg-compeek-accent/15 text-compeek-accent flex items-center justify-center text-xs font-bold shrink-0">1</div>
             <h3 className="text-sm font-semibold text-compeek-text">Start a virtual desktop</h3>
           </div>
           <div className="ml-[2.125rem]">
-            <p className="text-sm text-compeek-text-dim leading-relaxed mb-2.5">
-              Run this in your terminal to start a virtual Linux desktop:
+            <p className="text-sm text-compeek-text-dim leading-relaxed mb-3">
+              Configure and run in your terminal:
             </p>
-            <div className="flex items-center gap-2 bg-compeek-bg border border-compeek-border rounded-lg px-3.5 py-2.5 font-mono">
-              <code className="flex-1 text-sm select-all text-compeek-text">npx @rmbk/compeek start</code>
-              <CopyButton text="npx @rmbk/compeek start" />
+
+            {/* OS selector */}
+            <div className="flex gap-1 bg-compeek-bg rounded-lg p-0.5 mb-3">
+              {(['linux', 'windows', 'macos'] as const).map(os => (
+                <button
+                  key={os}
+                  onClick={() => setCliOs(os)}
+                  className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${
+                    cliOs === os ? 'bg-compeek-accent text-white' : 'text-compeek-text-dim hover:text-compeek-text'
+                  }`}
+                >
+                  {os === 'linux' ? 'Linux' : os === 'windows' ? 'Windows' : 'macOS'}
+                </button>
+              ))}
             </div>
+
+            {/* Options */}
+            <div className="space-y-2 mb-3">
+              <label className="flex items-center gap-2 text-xs text-compeek-text-dim cursor-pointer hover:text-compeek-text transition-colors">
+                <input
+                  type="checkbox"
+                  checked={cliPersist}
+                  onChange={e => setCliPersist(e.target.checked)}
+                  className="rounded border-compeek-border accent-compeek-accent"
+                />
+                Persist data between restarts
+              </label>
+              <label className="flex items-center gap-2 text-xs text-compeek-text-dim cursor-pointer hover:text-compeek-text transition-colors">
+                <input
+                  type="checkbox"
+                  checked={cliOpen}
+                  onChange={e => setCliOpen(e.target.checked)}
+                  className="rounded border-compeek-border accent-compeek-accent"
+                />
+                Auto-open dashboard in browser
+              </label>
+            </div>
+
+            {/* Generated command */}
+            <div className="flex items-center gap-2 bg-compeek-bg border border-compeek-border rounded-lg px-3.5 py-2.5 font-mono">
+              <code className="flex-1 text-sm select-all text-compeek-text">{cliCommand}</code>
+              <CopyButton text={cliCommand} />
+            </div>
+
+            {cliOs !== 'linux' && (
+              <p className="text-xs text-compeek-warning/80 mt-2 leading-relaxed">
+                Requires a Linux host with KVM for hardware virtualization.
+              </p>
+            )}
+
             <p className="text-xs text-compeek-text-dim/70 mt-2 leading-relaxed">
               It downloads a virtual desktop, starts it, and prints a connection code.
             </p>
@@ -279,36 +341,54 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
               </div>
 
               {mode === 'compeek' && (
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <Tooltip content="The port compeek uses to send commands to the desktop (you usually don't need to change this)">
+                <>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <Tooltip content="The port compeek uses to send commands to the desktop (you usually don't need to change this)">
+                        <label className="text-[10px] text-compeek-text-dim font-medium uppercase tracking-wider block mb-1 cursor-help">
+                          Control port
+                        </label>
+                      </Tooltip>
+                      <input
+                        type="text"
+                        value={apiPort}
+                        onChange={e => setApiPort(e.target.value)}
+                        placeholder="3001"
+                        className="w-full bg-compeek-bg border border-compeek-border rounded-lg px-3 py-2 text-sm focus:border-compeek-accent outline-none"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Tooltip content="The port for watching the live desktop in your browser (you usually don't need to change this)">
+                        <label className="text-[10px] text-compeek-text-dim font-medium uppercase tracking-wider block mb-1 cursor-help">
+                          View port
+                        </label>
+                      </Tooltip>
+                      <input
+                        type="text"
+                        value={vncPort}
+                        onChange={e => setVncPort(e.target.value)}
+                        placeholder="6081"
+                        className="w-full bg-compeek-bg border border-compeek-border rounded-lg px-3 py-2 text-sm focus:border-compeek-accent outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password */}
+                  <div>
+                    <Tooltip content="The auth token printed by the CLI (same as VNC password). Required for tunneled connections.">
                       <label className="text-[10px] text-compeek-text-dim font-medium uppercase tracking-wider block mb-1 cursor-help">
-                        Control port
+                        Password
                       </label>
                     </Tooltip>
                     <input
-                      type="text"
-                      value={apiPort}
-                      onChange={e => setApiPort(e.target.value)}
-                      placeholder="3001"
+                      type="password"
+                      value={vncPassword}
+                      onChange={e => setVncPassword(e.target.value)}
+                      placeholder="Optional — from CLI output"
                       className="w-full bg-compeek-bg border border-compeek-border rounded-lg px-3 py-2 text-sm focus:border-compeek-accent outline-none"
                     />
                   </div>
-                  <div className="flex-1">
-                    <Tooltip content="The port for watching the live desktop in your browser (you usually don't need to change this)">
-                      <label className="text-[10px] text-compeek-text-dim font-medium uppercase tracking-wider block mb-1 cursor-help">
-                        View port
-                      </label>
-                    </Tooltip>
-                    <input
-                      type="text"
-                      value={vncPort}
-                      onChange={e => setVncPort(e.target.value)}
-                      placeholder="6081"
-                      className="w-full bg-compeek-bg border border-compeek-border rounded-lg px-3 py-2 text-sm focus:border-compeek-accent outline-none"
-                    />
-                  </div>
-                </div>
+                </>
               )}
 
               {mode === 'vnc-only' && (

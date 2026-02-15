@@ -9,15 +9,7 @@ function generateId(): string {
 }
 
 function defaultSessions(): SessionConfig[] {
-  return [{
-    id: generateId(),
-    name: 'Desktop 1',
-    type: 'compeek',
-    apiHost: window.location.hostname || 'localhost',
-    apiPort: 3001,
-    vncHost: window.location.hostname || 'localhost',
-    vncPort: 6081,
-  }];
+  return [];
 }
 
 function loadSessions(): SessionConfig[] {
@@ -69,11 +61,7 @@ export function useSessionManager(): SessionManager {
   }, [setActiveSessionId]);
 
   const removeSession = useCallback((id: string) => {
-    setSessions(prev => {
-      const next = prev.filter(s => s.id !== id);
-      if (next.length === 0) return prev;
-      return next;
-    });
+    setSessions(prev => prev.filter(s => s.id !== id));
     setActiveSessionIdRaw(prev => {
       const remaining = sessions.filter(s => s.id !== id);
       if (remaining.find(s => s.id === prev)) return prev;

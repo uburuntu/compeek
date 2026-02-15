@@ -10,7 +10,7 @@ interface Attachment {
 
 interface Props {
   isRunning: boolean;
-  onStart: (goal: string, model?: string, attachments?: Array<{ base64: string; mimeType: string }>) => void;
+  onStart: (goal: string, model?: string, attachments?: Array<{ base64: string; mimeType: string }>, maxSteps?: number) => void;
   onStop: () => void;
   apiKey?: string;
   initialModel?: string;
@@ -20,6 +20,7 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
   const [goal, setGoal] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [model, setModel] = useState(initialModel || 'claude-sonnet-4-5');
+  const [maxSteps, setMaxSteps] = useState(50);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const models = [
@@ -60,7 +61,7 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
     const atts = attachments.length > 0
       ? attachments.map(a => ({ base64: a.base64, mimeType: a.mimeType }))
       : undefined;
-    onStart(goal, model, atts);
+    onStart(goal, model, atts, maxSteps);
   };
 
   const presetGoals = [
@@ -72,7 +73,7 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
 
   return (
     <div className="p-3 border-b border-compeek-border space-y-3 shrink-0">
-      {/* Model selector */}
+      {/* Model selector + Max steps */}
       <div className="flex items-center gap-2">
         <Tooltip content="Which AI model to use for this task">
           <span className="text-[10px] text-compeek-text-dim font-medium uppercase tracking-wider cursor-help">Model</span>
@@ -93,6 +94,19 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
             </Tooltip>
           ))}
         </div>
+        <Tooltip content="Maximum number of agent steps before stopping">
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              value={maxSteps}
+              onChange={e => setMaxSteps(Math.max(1, Math.min(200, parseInt(e.target.value) || 50)))}
+              className="w-12 bg-compeek-bg border border-compeek-border rounded-md px-1.5 py-1 text-xs text-center text-compeek-text outline-none focus:border-compeek-accent/50"
+              min="1"
+              max="200"
+            />
+            <span className="text-[10px] text-compeek-text-dim font-medium uppercase tracking-wider cursor-help">Steps</span>
+          </div>
+        </Tooltip>
       </div>
 
       {/* Attachments */}
@@ -130,7 +144,7 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
         />
       </div>
 
-      {/* Actions row: Attach + Presets + Start */}
+      {/* Actions row: Attach + Start */}
       <div className="flex items-center gap-2">
         <input
           ref={fileInputRef}
@@ -158,12 +172,12 @@ export default function WorkflowPanel({ isRunning, onStart, onStop, apiKey, init
         </Tooltip>
 
         {/* Preset goals */}
-        <div className="flex gap-1 flex-1 overflow-x-auto">
+        <div className="flex gap-1.5 flex-1 flex-wrap">
           {presetGoals.map(p => (
             <Tooltip key={p.label} content="Click to use this pre-written task" position="bottom">
               <button
                 onClick={() => setGoal(p.goal)}
-                className="text-[10px] px-2 py-1 rounded-full bg-compeek-bg border border-compeek-border text-compeek-text-dim hover:text-compeek-text hover:border-compeek-accent/50 transition-colors whitespace-nowrap shrink-0"
+                className="text-[10px] px-2 py-1 rounded-full bg-compeek-bg border border-compeek-border text-compeek-text-dim hover:text-compeek-text hover:border-compeek-accent/50 transition-colors whitespace-nowrap"
               >
                 {p.label}
               </button>

@@ -10,6 +10,6 @@ Built entirely during the hackathon, compeek features:
 - **MCP server** enabling Claude Code and other IDE agents to control desktops
 - **Multimodal input**: attach document photos, and the agent extracts data and fills forms autonomously
 - **Secure remote access** via Cloudflare Tunnel with bearer token auth
-- **One command to start**: `npx @rmbk/compeek start --open`
+- **One command to start**: `npx @rmbk/compeek@latest start --open`
 
 compeek breaks the barrier between AI and desktop software — making autonomous computer use accessible to everyone.

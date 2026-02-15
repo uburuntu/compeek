@@ -16,7 +16,7 @@ export interface SessionState {
   latestScreenshot: string | null;
   latestAction: any;
   currentModel: string | null;
-  startWorkflow: (goal: string, model?: string, attachments?: Array<{ base64: string; mimeType: string }>) => Promise<void>;
+  startWorkflow: (goal: string, model?: string, attachments?: Array<{ base64: string; mimeType: string }>, maxSteps?: number) => Promise<void>;
   stopWorkflow: () => void;
   containerUrl: string;
 }
@@ -61,7 +61,7 @@ export function useSession(config: SessionConfig, apiKey?: string): SessionState
     return () => { cancelled = true; clearInterval(interval); };
   }, [config.type, containerUrl]);
 
-  const startWorkflow = useCallback(async (goal: string, model?: string, attachments?: Array<{ base64: string; mimeType: string }>) => {
+  const startWorkflow = useCallback(async (goal: string, model?: string, attachments?: Array<{ base64: string; mimeType: string }>, maxSteps?: number) => {
     if (!apiKeyRef.current) {
       setEvents([{ type: 'error', timestamp: Date.now(), data: { type: 'error', message: 'Set your Anthropic API key in Settings first.', recoverable: false } }]);
       return;
@@ -91,6 +91,7 @@ export function useSession(config: SessionConfig, apiKey?: string): SessionState
         apiToken: config.vncPassword,
         osType: config.osType,
         attachments,
+        maxIterations: maxSteps,
       }, onEvent, abort.signal);
     } catch (err: any) {
       onEvent({

@@ -24,7 +24,7 @@
 ### Option 1: One command (recommended)
 
 ```bash
-npx @rmbk/compeek start --open
+npx @rmbk/compeek@latest start --open
 ```
 
 This downloads a virtual desktop, starts it, and opens the dashboard in your browser.
@@ -58,7 +58,7 @@ The agent loop runs in the browser via `@anthropic-ai/sdk` with `dangerouslyAllo
 It uses `computer_20250124`, `bash_20250124`, and `text_editor_20250728` tools.
 Extended thinking is enabled with a 10240 token budget.
 
-Each container runs Ubuntu 24.04 with Xvfb (1280x720), XFWM4, x11vnc, noVNC, and Firefox (with uBlock Origin).
+Each container runs Ubuntu 24.04 with Xvfb (1280x768), XFWM4, x11vnc, noVNC, and Firefox (with uBlock Origin).
 The container exposes a minimal Express tool server with endpoints:
 `GET /api/health`, `GET /api/info`, `POST /api/tool`, `POST /api/bash`.
 
@@ -78,7 +78,7 @@ Set `DESKTOP_MODE` when starting a container:
 | `headless` | No visual — commands only | Automated scripts |
 
 ```bash
-npx @rmbk/compeek start --mode browser
+npx @rmbk/compeek@latest start --mode browser
 # or
 docker run -d -e DESKTOP_MODE=browser -p 3001:3000 -p 6081:6080 --shm-size=512m ghcr.io/uburuntu/compeek
 ```
@@ -100,13 +100,13 @@ Three ways to connect:
 ## CLI
 
 ```bash
-npx @rmbk/compeek start          # Pull image, start container, print connection info
-npx @rmbk/compeek start --open   # Same + open dashboard in browser
-npx @rmbk/compeek stop           # Stop all compeek containers
-npx @rmbk/compeek stop 1         # Stop compeek-1
-npx @rmbk/compeek status         # List running containers
-npx @rmbk/compeek logs           # Follow container logs
-npx @rmbk/compeek open           # Open dashboard with auto-connect URL
+npx @rmbk/compeek@latest start          # Pull image, start container, print connection info
+npx @rmbk/compeek@latest start --open   # Same + open dashboard in browser
+npx @rmbk/compeek@latest stop           # Stop all compeek containers
+npx @rmbk/compeek@latest stop 1         # Stop compeek-1
+npx @rmbk/compeek@latest status         # List running containers
+npx @rmbk/compeek@latest logs           # Follow container logs
+npx @rmbk/compeek@latest open           # Open dashboard with auto-connect URL
 ```
 
 Flags for `start`: `--name`, `--api-port`, `--vnc-port`, `--mode`, `--persist`, `--password`, `--tunnel`, `--no-pull`, `--open`.
@@ -126,7 +126,7 @@ Each container auto-generates a **VNC password** on startup. The password is inc
 You can set your own password with `--password`:
 
 ```bash
-npx @rmbk/compeek start --password mysecret
+npx @rmbk/compeek@latest start --password mysecret
 ```
 
 ### Remote access
@@ -136,7 +136,7 @@ If you're running compeek on the same machine as your browser, everything works 
 To access a container from another machine (e.g. a remote server), use `--tunnel` to create public URLs:
 
 ```bash
-npx @rmbk/compeek start --tunnel
+npx @rmbk/compeek@latest start --tunnel
 ```
 
 This uses [localtunnel](https://theboroer.github.io/localtunnel-www/) to make the container reachable over the internet. The VNC desktop is password-protected, but the tool API currently has no authentication — use a VPN or firewall for sensitive environments.

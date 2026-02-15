@@ -7,7 +7,7 @@ services:
     environment:
       - DISPLAY=:1
       - WIDTH=1280
-      - HEIGHT=720
+      - HEIGHT=768
       - DESKTOP_MODE=full
       - COMPEEK_SESSION_NAME=Desktop 1
     ports:
@@ -32,7 +32,7 @@ services:
     environment:
       - DISPLAY=:1
       - WIDTH=1280
-      - HEIGHT=720
+      - HEIGHT=768
       - DESKTOP_MODE=full
       - COMPEEK_SESSION_NAME=Desktop 2
     ports:
@@ -57,7 +57,7 @@ services:
     environment:
       - DISPLAY=:1
       - WIDTH=1280
-      - HEIGHT=720
+      - HEIGHT=768
       - DESKTOP_MODE=full
       - COMPEEK_SESSION_NAME=Desktop 3
     ports:

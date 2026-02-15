@@ -23,8 +23,27 @@ const statusColors: Record<SessionStatus, string> = {
 };
 
 export default function SessionTabBar({ sessions, activeSessionId, sessionStatuses, onSelect, onClose, onAdd }: Props) {
+  const isHomeActive = activeSessionId === '';
+
   return (
     <div className="h-9 flex items-center bg-compeek-bg border-b border-compeek-border shrink-0 overflow-x-auto">
+      {/* Permanent Home tab */}
+      <button
+        onClick={() => onSelect('')}
+        className={`group relative flex items-center gap-2 px-4 h-full text-xs font-medium transition-colors whitespace-nowrap ${
+          isHomeActive
+            ? 'bg-compeek-surface text-compeek-text border-b-2 border-compeek-accent'
+            : 'text-compeek-text-dim hover:text-compeek-text hover:bg-compeek-surface/50'
+        }`}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+        <span>Home</span>
+      </button>
+
+      {/* Session tabs */}
       {sessions.map(session => {
         const isActive = session.id === activeSessionId;
         const status = sessionStatuses[session.id] || 'disconnected';
@@ -55,14 +74,12 @@ export default function SessionTabBar({ sessions, activeSessionId, sessionStatus
                 </span>
               </Tooltip>
             )}
-            {sessions.length > 1 && (
-              <span
-                onClick={(e) => { e.stopPropagation(); onClose(session.id); }}
-                className="ml-1 w-4 h-4 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-compeek-border text-compeek-text-dim hover:text-compeek-text transition-all"
-              >
-                &times;
-              </span>
-            )}
+            <span
+              onClick={(e) => { e.stopPropagation(); onClose(session.id); }}
+              className="ml-1 w-4 h-4 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-compeek-border text-compeek-text-dim hover:text-compeek-text transition-all"
+            >
+              &times;
+            </span>
           </button>
         );
       })}

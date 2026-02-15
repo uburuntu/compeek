@@ -22,7 +22,7 @@ export function createCompeekMcpServer(options: McpServerOptions): McpServer {
 
   server.tool(
     'screenshot',
-    'Take a screenshot of the virtual desktop (1280x720). Optionally zoom into a specific region.',
+    'Take a screenshot of the virtual desktop (1280x768). Optionally zoom into a specific region.',
     {
       region: z.tuple([z.number(), z.number(), z.number(), z.number()])
         .describe('Zoom region [x1, y1, x2, y2] for a cropped screenshot')
@@ -53,7 +53,7 @@ export function createCompeekMcpServer(options: McpServerOptions): McpServer {
 
   server.tool(
     'computer',
-    'Perform mouse and keyboard actions on the virtual desktop (1280x720). Actions: left_click, right_click, double_click, triple_click, middle_click, type, key, scroll, mouse_move, left_click_drag, left_mouse_down, left_mouse_up, hold_key, wait.',
+    'Perform mouse and keyboard actions on the virtual desktop (1280x768). Actions: left_click, right_click, double_click, triple_click, middle_click, type, key, scroll, mouse_move, left_click_drag, left_mouse_down, left_mouse_up, hold_key, wait.',
     {
       action: z.enum([
         'left_click', 'right_click', 'double_click', 'triple_click', 'middle_click',

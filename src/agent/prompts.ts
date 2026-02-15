@@ -9,7 +9,7 @@ Desktop environment:
 - Firefox browser with uBlock Origin (ads blocked by default)
 - Full bash/terminal: git, curl, wget, python3, node, npm, imagemagick, xclip, xdotool
 - You can install additional packages with \`sudo apt install\` or \`pip install\` or \`npm install\`
-- Display resolution: 1280x720
+- Display resolution: 1280x768
 
 Data persistence:
 - \`/home/compeek/data\` is persistent storage — files here survive container restarts when the user starts with \`--persist\`

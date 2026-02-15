@@ -5,7 +5,7 @@ import { buildTextEditorCommand, describeTextEditorAction } from '@/agent/text-e
 import type { TextEditorInput } from '@/agent/text-editor';
 
 const DISPLAY_WIDTH = 1280;
-const DISPLAY_HEIGHT = 720;
+const DISPLAY_HEIGHT = 768;
 const MAX_TOKENS = 16384;
 const THINKING_BUDGET = 10240;
 const DEFAULT_MAX_ITERATIONS = 50;
@@ -145,6 +145,8 @@ export async function agentLoop(
   }
 
   let actionCount = 0;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   onEvent?.(makeEvent('status', {
     type: 'status',
@@ -159,7 +161,7 @@ export async function agentLoop(
 
     onEvent?.(makeEvent('status', {
       type: 'status',
-      message: `Iteration ${iteration + 1}/${maxIterations}`,
+      message: `Step ${iteration + 1}/${maxIterations}`,
       step: iteration + 1,
       totalSteps: maxIterations,
     }));
@@ -176,6 +178,17 @@ export async function agentLoop(
         budget_tokens: THINKING_BUDGET,
       },
     });
+
+    // Track token usage
+    if (response.usage) {
+      totalInputTokens += response.usage.input_tokens || 0;
+      totalOutputTokens += response.usage.output_tokens || 0;
+      onEvent?.(makeEvent('tokens', {
+        type: 'tokens',
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+      } as any));
+    }
 
     const responseContent = response.content;
     messages.push({ role: 'assistant', content: responseContent as Anthropic.Beta.Messages.BetaContentBlockParam[] });
@@ -216,6 +229,14 @@ export async function agentLoop(
           }
         } else if (block.name === 'bash') {
           const input = block.input as { command: string };
+
+          onEvent?.(makeEvent('action', {
+            type: 'action',
+            action: 'bash',
+            params: block.input as Record<string, unknown>,
+            description: `$ ${input.command.length > 80 ? input.command.slice(0, 80) + '...' : input.command}`,
+          }));
+
           const result = await executeBashRemote(request.containerUrl, input.command, request.apiToken);
 
           if (result.error) {
@@ -257,7 +278,7 @@ export async function agentLoop(
     messages.push({ role: 'user', content: toolResults });
   }
 
-  // Max iterations
-  onEvent?.(makeEvent('error', { type: 'error', message: `Maximum iterations (${maxIterations}) reached.`, recoverable: false }));
-  return { success: false, actionCount, message: 'Maximum iterations reached' };
+  // Max steps
+  onEvent?.(makeEvent('error', { type: 'error', message: `Maximum steps (${maxIterations}) reached.`, recoverable: false }));
+  return { success: false, actionCount, message: 'Maximum steps reached' };
 }

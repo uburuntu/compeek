@@ -22,7 +22,7 @@ async function startStdioServer(options: StdioOptions): Promise<void> {
     const healthy = await executor.healthCheck();
     if (!healthy) {
       process.stderr.write(`Warning: Container at ${options.containerUrl} is not responding.\n`);
-      process.stderr.write(`Make sure a container is running: npx @rmbk/compeek start\n`);
+      process.stderr.write(`Make sure a container is running: npx @rmbk/compeek@latest start\n`);
     }
   }
 

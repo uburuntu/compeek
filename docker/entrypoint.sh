@@ -3,7 +3,7 @@ set -e
 
 DESKTOP_MODE="${DESKTOP_MODE:-full}"
 DASHBOARD_URL="${DASHBOARD_URL:-https://compeek.rmbk.me}"
-export GTK_THEME=Adwaita:dark
+export GTK_THEME=Arc-Dark
 
 # Auto-generate session password if not provided (used for both VNC and API auth)
 if [ -z "$VNC_PASSWORD" ]; then
@@ -84,14 +84,21 @@ fi
 
 # 1. Start Xvfb (always needed — tool server uses DISPLAY for screenshots)
 echo "[${STEP}] Starting Xvfb..."
-Xvfb :1 -screen 0 ${WIDTH:-1280}x${HEIGHT:-720}x24 -ac &
+Xvfb :1 -screen 0 ${WIDTH:-1280}x${HEIGHT:-768}x24 -ac &
 sleep 1
 STEP=$((STEP + 1))
 
-# 2. Start window manager (skip in headless)
+# 2. Start window manager and settings daemon (skip in headless)
 if [ "$DESKTOP_MODE" != "headless" ]; then
-  echo "[${STEP}] Starting XFWM4..."
-  DISPLAY=:1 GTK_THEME=Adwaita:dark xfwm4 --daemon &
+  # Start dbus session (required for xfconf settings to work)
+  eval $(dbus-launch --sh-syntax)
+  export DBUS_SESSION_BUS_ADDRESS
+  export DBUS_SESSION_BUS_PID
+
+  echo "[${STEP}] Starting XFCE4 desktop..."
+  DISPLAY=:1 xfsettingsd &
+  sleep 0.5
+  DISPLAY=:1 xfwm4 &
   sleep 1
   STEP=$((STEP + 1))
 
@@ -101,11 +108,11 @@ if [ "$DESKTOP_MODE" != "headless" ]; then
   fi
 fi
 
-# 3. Start panel (full mode only)
-if [ "$DESKTOP_MODE" = "full" ]; then
-  echo "[${STEP}] Starting Tint2..."
-  DISPLAY=:1 tint2 &
-  sleep 0.5
+# 3. Start panel (full and browser modes)
+if [ "$DESKTOP_MODE" = "full" ] || [ "$DESKTOP_MODE" = "browser" ]; then
+  echo "[${STEP}] Starting XFCE4 panel..."
+  DISPLAY=:1 xfce4-panel &
+  sleep 1
   STEP=$((STEP + 1))
 fi
 
@@ -155,8 +162,8 @@ if [ "$DESKTOP_MODE" = "full" ] || [ "$DESKTOP_MODE" = "browser" ]; then
   fi
   sleep 3
 
-  # Maximize Firefox window
-  DISPLAY=:1 xdotool search --onlyvisible --class Firefox windowactivate --sync key F11 2>/dev/null || true
+  # Maximize Firefox window via xfwm4 shortcut
+  DISPLAY=:1 xdotool search --onlyvisible --class Firefox windowactivate --sync key --clearmodifiers alt+F10 2>/dev/null || true
   STEP=$((STEP + 1))
 fi
 

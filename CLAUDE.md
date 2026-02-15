@@ -16,7 +16,7 @@ npm run test:watch         # vitest watch mode
 npx vitest run tests/agent/tools.test.ts          # single test file
 npx vitest run -t "handles screenshot action"     # single test by name
 docker compose up --build  # 3 desktop containers on ports 3001-3003 / 6081-6083
-npx @rmbk/compeek start          # CLI: pull image, start container, print connection string
+npx @rmbk/compeek@latest start          # CLI: pull image, start container, print connection string
 git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version from tag)
 ```
 
@@ -33,7 +33,7 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 
 **Multi-session** — the frontend manages multiple container connections via tabs. Each session has its own health-check polling and independent agent loop. Session configs persist in localStorage.
 
-**Docker** (`docker/Dockerfile`, `docker-compose.yml`) — Ubuntu 24.04 containers with Xvfb (1280x720), XFWM4, x11vnc, noVNC, Firefox (with uBlock Origin). Published to `ghcr.io/uburuntu/compeek`. Ports per container: 3000 (tool API), 6080 (noVNC), 5900 (VNC). Tunneling enabled by default via Cloudflare Tunnel (`--no-tunnel` to disable, `--tunnel localtunnel` for localtunnel).
+**Docker** (`docker/Dockerfile`, `docker-compose.yml`) — Ubuntu 24.04 containers with Xvfb (1280x768), XFWM4, x11vnc, noVNC, Firefox (with uBlock Origin). Published to `ghcr.io/uburuntu/compeek`. Ports per container: 3000 (tool API), 6080 (noVNC), 5900 (VNC). Tunneling enabled by default via Cloudflare Tunnel (`--no-tunnel` to disable, `--tunnel localtunnel` for localtunnel).
 
 **Desktop modes** — controlled by `DESKTOP_MODE` env var in `docker/entrypoint.sh`:
 - `full` (default) — Xvfb + XFWM4 + Tint2 + Firefox + target app
@@ -57,7 +57,7 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 - **Prompts**: `src/agent/prompts.ts` — `SYSTEM_PROMPT_BASE`, `SYSTEM_PROMPT_WINDOWS`, `SYSTEM_PROMPT_MACOS`, `FORM_FILL_PROMPT`, `GENERAL_WORKFLOW_PROMPT`, `VALIDATION_PROMPT`, `DOCUMENT_EXTRACTION_PROMPT`. Imported in the browser via Vite `@/` alias.
 - **Session management**: `src/app/hooks/useSession.ts` (per-session state + agent loop), `src/app/hooks/useSessionManager.ts` (CRUD + localStorage). API key stored in browser via `useSettings.ts`.
 - **Connection strings**: `src/app/App.tsx` reads `#config=` from URL hash on mount. `src/app/components/AddSessionDialog.tsx` has a paste box for base64 strings or dashboard URLs.
-- **CLI**: `bin/compeek.mjs` — zero-dep Node.js CLI (`start`, `stop`, `status`, `logs`, `open`). Published as `@rmbk/compeek` on npm, run via `npx @rmbk/compeek`. The `start` command defaults to Cloudflare tunnels (`--no-tunnel` to disable, `--tunnel localtunnel` for localtunnel). Supports `--persist` for data volume, `--mode`, `--password`, `--open`, `--os linux|windows|macos` (with `--version`, `--ram`, `--cpus`, `--disk` for VMs).
+- **CLI**: `bin/compeek.mjs` — zero-dep Node.js CLI (`start`, `stop`, `status`, `logs`, `open`). Published as `@rmbk/compeek` on npm, run via `npx @rmbk/compeek@latest`. The `start` command defaults to Cloudflare tunnels (`--no-tunnel` to disable, `--tunnel localtunnel` for localtunnel). Supports `--persist` for data volume, `--mode`, `--password`, `--open`, `--os linux|windows|macos` (with `--version`, `--ram`, `--cpus`, `--disk` for VMs).
 - **Tailwind theme**: Custom `compeek-*` color tokens in `tailwind.config.js` (dark theme).
 
 ## Build details

@@ -2,14 +2,14 @@
 
 ## Pre-Recording Setup
 
-1. Start Linux container: `npx @rmbk/compeek start --open --name linux-demo`
-2. Start Windows container on remote Linux server: `npx @rmbk/compeek start --os windows --tunnel --name windows-demo`
-3. Start MCP Linux container: `npx @rmbk/compeek start --name mcp-demo`
+1. Start Linux container: `npx @rmbk/compeek@latest start --open --name linux-demo`
+2. Start Windows container on remote Linux server: `npx @rmbk/compeek@latest start --os windows --tunnel --name windows-demo`
+3. Start MCP Linux container: `npx @rmbk/compeek@latest start --name mcp-demo`
 4. Open dashboard, connect all 3 sessions
 5. Set API key, select Opus 4.6
 6. Have sample passport image saved locally
 7. Boot Windows VM well before recording (~3 min startup)
-8. Configure Claude Code MCP: `npx @rmbk/compeek mcp --container-url <url>`
+8. Configure Claude Code MCP: `npx @rmbk/compeek@latest mcp --container-url <url>`
 9. Verify all 3 tabs show green connection dots
 
 ## Timeline
@@ -55,5 +55,5 @@
 
 ### [2:45-3:00] Closing
 - All 3 tabs visible in dashboard
-- "compeek — AI eyes and hands for any desktop. One command: npx @rmbk/compeek start"
+- "compeek — AI eyes and hands for any desktop. One command: npx @rmbk/compeek@latest start"
 - GitHub URL

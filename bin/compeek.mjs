@@ -496,10 +496,10 @@ async function cmdStart(args) {
     console.log(`  ${c.dim}Streamable HTTP${c.reset}  ${tunnel.apiUrl}/mcp`);
   }
   console.log(`  ${c.dim}Local MCP${c.reset}        http://localhost:${apiPort}/mcp`);
-  console.log(`  ${c.dim}stdio proxy${c.reset}      npx @rmbk/compeek mcp`);
+  console.log(`  ${c.dim}stdio proxy${c.reset}      npx @rmbk/compeek@latest mcp`);
   console.log('');
   console.log(`  ${c.dim}Claude Code config (~/.claude/settings.json):${c.reset}`);
-  console.log(`  ${c.dim}{ "mcpServers": { "compeek": { "command": "npx", "args": ["-y", "@rmbk/compeek", "mcp"] } } }${c.reset}`);
+  console.log(`  ${c.dim}{ "mcpServers": { "compeek": { "command": "npx", "args": ["-y", "@rmbk/compeek@latest", "mcp"] } } }${c.reset}`);
   console.log('');
 
   if (flags.open) {
@@ -626,8 +626,8 @@ async function cmdMcp(args) {
       process.stderr.write(`Container ${name} ready at ${containerUrl}\n`);
     } else {
       process.stderr.write('No running compeek container found.\n');
-      process.stderr.write('Start one with: npx @rmbk/compeek start\n');
-      process.stderr.write('Or use: npx @rmbk/compeek mcp --start\n');
+      process.stderr.write('Start one with: npx @rmbk/compeek@latest start\n');
+      process.stderr.write('Or use: npx @rmbk/compeek@latest mcp --start\n');
       process.exit(1);
     }
   }
@@ -752,7 +752,7 @@ switch (command) {
     console.log(`
   ${c.bold}${c.cyan}compeek${c.reset} ${c.dim}— AI eyes & hands for any desktop${c.reset}
 
-  ${c.bold}Usage${c.reset}   npx @rmbk/compeek ${c.dim}[command] [options]${c.reset}
+  ${c.bold}Usage${c.reset}   npx @rmbk/compeek@latest ${c.dim}[command] [options]${c.reset}
 
   ${c.bold}Commands${c.reset}
     start ${c.dim}............${c.reset} Start a new virtual desktop ${c.dim}(default)${c.reset}

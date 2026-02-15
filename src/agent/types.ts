@@ -1,8 +1,8 @@
 // Agent event types emitted during workflow execution
 export interface AgentEvent {
-  type: 'screenshot' | 'action' | 'thinking' | 'complete' | 'error' | 'status';
+  type: 'screenshot' | 'action' | 'thinking' | 'complete' | 'error' | 'status' | 'tokens';
   timestamp: number;
-  data: ScreenshotEvent | ActionEvent | ThinkingEvent | CompleteEvent | ErrorEvent | StatusEvent;
+  data: ScreenshotEvent | ActionEvent | ThinkingEvent | CompleteEvent | ErrorEvent | StatusEvent | TokensEvent;
 }
 
 export interface ScreenshotEvent {
@@ -42,6 +42,12 @@ export interface StatusEvent {
   message: string;
   step: number;
   totalSteps?: number;
+}
+
+export interface TokensEvent {
+  type: 'tokens';
+  inputTokens: number;
+  outputTokens: number;
 }
 
 // Workflow types

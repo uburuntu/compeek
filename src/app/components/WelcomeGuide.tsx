@@ -1,15 +1,16 @@
 import logoImg from '../assets/logo.png';
 
 interface Props {
+  visible?: boolean;
   onAddSession: () => void;
   onOpenSettings: () => void;
   hasApiKey: boolean;
   hasConnectedSession: boolean;
 }
 
-export default function WelcomeGuide({ onAddSession, onOpenSettings, hasApiKey, hasConnectedSession }: Props) {
+export default function WelcomeGuide({ visible = true, onAddSession, onOpenSettings, hasApiKey, hasConnectedSession }: Props) {
   return (
-    <div className="flex-1 flex overflow-y-auto bg-compeek-bg relative">
+    <div className={`flex-1 flex overflow-y-auto bg-compeek-bg relative ${visible ? '' : 'hidden'}`}>
       {/* Ambient glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-[40%] -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-compeek-accent rounded-full blur-[160px] animate-hero-glow" />
