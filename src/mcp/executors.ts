@@ -63,13 +63,23 @@ export function createHttpExecutor(containerUrl: string, apiToken?: string): Too
 }
 
 export function createDirectExecutor(): ToolExecutor {
+  const isSidecar = process.env.DESKTOP_MODE === 'sidecar';
+  const sidecarOs = process.env.SIDECAR_OS || 'unknown';
+
   return {
     async executeAction(action: ComputerAction) {
+      if (isSidecar) {
+        const { executeActionVnc } = await import('../agent/vnc-tools.js');
+        return executeActionVnc(action);
+      }
       const { executeAction } = await import('../agent/tools.js');
       return executeAction(action);
     },
 
     async executeBash(command: string) {
+      if (isSidecar) {
+        return { error: `Shell commands are not available for ${sidecarOs} VMs. Use mouse and keyboard actions (computer tool) to interact with the desktop instead.` };
+      }
       const { execSync } = await import('child_process');
       try {
         const output = execSync(command, {

@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y \
     thunar \
     # Python (for simple file server)
     python3 \
+    python3-pip \
+    # Networking (for sidecar mode connectivity checks)
+    netcat-openbsd \
     # Build tools
     curl \
     git \
@@ -78,6 +81,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Install localtunnel globally for public access
 RUN npm install -g localtunnel
 
+# Install vncdotool for VNC-based tool execution (sidecar mode)
+RUN pip3 install --break-system-packages vncdotool
+
 # Install cloudflared for Cloudflare Tunnel (no account needed for quick tunnels)
 RUN curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$(dpkg --print-architecture) -o /usr/local/bin/cloudflared \
     && chmod +x /usr/local/bin/cloudflared
@@ -120,7 +126,7 @@ RUN npm ci
 # Copy source and build the container server
 COPY tsconfig.json ./
 COPY src/container/ ./src/container/
-COPY src/agent/tools.ts src/agent/types.ts src/agent/prompts.ts src/agent/text-editor.ts ./src/agent/
+COPY src/agent/tools.ts src/agent/types.ts src/agent/prompts.ts src/agent/text-editor.ts src/agent/vnc-tools.ts ./src/agent/
 COPY src/lib/ ./src/lib/
 COPY src/mcp/ ./src/mcp/
 

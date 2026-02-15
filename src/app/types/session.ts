@@ -7,6 +7,7 @@ export interface SessionConfig {
   vncHost: string;
   vncPort: number;
   vncPassword?: string;
+  osType?: 'linux' | 'windows' | 'macos';
 }
 
 export type SessionStatus = 'connected' | 'disconnected' | 'reconnecting';

@@ -48,6 +48,13 @@ export default function SessionTabBar({ sessions, activeSessionId, sessionStatus
                 <span className="text-[9px] text-compeek-text-dim opacity-60 cursor-help">VNC</span>
               </Tooltip>
             )}
+            {session.osType && session.osType !== 'linux' && (
+              <Tooltip content={`${session.osType === 'windows' ? 'Windows' : 'macOS'} VM — mouse and keyboard only`} position="bottom">
+                <span className="text-[9px] text-compeek-text-dim opacity-60 cursor-help uppercase">
+                  {session.osType === 'windows' ? 'WIN' : 'MAC'}
+                </span>
+              </Tooltip>
+            )}
             {sessions.length > 1 && (
               <span
                 onClick={(e) => { e.stopPropagation(); onClose(session.id); }}

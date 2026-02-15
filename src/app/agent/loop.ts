@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { SYSTEM_PROMPT_BASE, FORM_FILL_PROMPT, GENERAL_WORKFLOW_PROMPT } from '@/agent/prompts';
+import { SYSTEM_PROMPT_BASE, SYSTEM_PROMPT_WINDOWS, SYSTEM_PROMPT_MACOS, FORM_FILL_PROMPT, GENERAL_WORKFLOW_PROMPT } from '@/agent/prompts';
 import type { AgentEvent, ComputerAction } from '@/agent/types';
 import { buildTextEditorCommand, describeTextEditorAction } from '@/agent/text-editor';
 import type { TextEditorInput } from '@/agent/text-editor';
@@ -21,6 +21,7 @@ export interface BrowserWorkflowRequest {
   documentBase64?: string;
   documentMimeType?: string;
   maxIterations?: number;
+  osType?: 'linux' | 'windows' | 'macos';
 }
 
 type EventCallback = (event: AgentEvent) => void;
@@ -85,6 +86,12 @@ export async function agentLoop(
   });
   const maxIterations = request.maxIterations || DEFAULT_MAX_ITERATIONS;
   const model = request.model || DEFAULT_MODEL;
+  const osType = request.osType || 'linux';
+
+  // Select system prompt based on OS
+  const systemPrompt = osType === 'windows' ? SYSTEM_PROMPT_WINDOWS
+    : osType === 'macos' ? SYSTEM_PROMPT_MACOS
+    : SYSTEM_PROMPT_BASE;
 
   // Build prompt
   let userPrompt: string;
@@ -119,18 +126,28 @@ export async function agentLoop(
   const isOpus = model.includes('opus');
   const computerToolType = isOpus ? 'computer_20251124' : 'computer_20250124';
 
+  // VM desktops may use different resolution
+  const displayWidth = osType !== 'linux' ? 1024 : DISPLAY_WIDTH;
+  const displayHeight = osType !== 'linux' ? 768 : DISPLAY_HEIGHT;
+
   const tools: Anthropic.Beta.Messages.BetaToolUnion[] = [
     {
       type: computerToolType,
       name: 'computer',
-      display_width_px: DISPLAY_WIDTH,
-      display_height_px: DISPLAY_HEIGHT,
+      display_width_px: displayWidth,
+      display_height_px: displayHeight,
       display_number: 1,
       ...(isOpus ? { enable_zoom: true } : {}),
     } as Anthropic.Beta.Messages.BetaToolUnion,
-    { type: 'bash_20250124', name: 'bash' },
-    { type: 'text_editor_20250728', name: 'str_replace_based_edit_tool' },
   ];
+
+  // Bash and text editor only available on Linux containers
+  if (osType === 'linux') {
+    tools.push(
+      { type: 'bash_20250124', name: 'bash' },
+      { type: 'text_editor_20250728', name: 'str_replace_based_edit_tool' },
+    );
+  }
 
   let actionCount = 0;
 
@@ -155,7 +172,7 @@ export async function agentLoop(
     const response = await client.beta.messages.create({
       model,
       max_tokens: MAX_TOKENS,
-      system: SYSTEM_PROMPT_BASE,
+      system: systemPrompt,
       messages,
       tools,
       betas: [isOpus ? 'computer-use-2025-11-24' : 'computer-use-2025-01-24'],
@@ -193,7 +210,7 @@ export async function agentLoop(
           if (result.error) {
             toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result.error, is_error: true });
           } else if (result.base64) {
-            onEvent?.(makeEvent('screenshot', { type: 'screenshot', base64: result.base64, width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT }));
+            onEvent?.(makeEvent('screenshot', { type: 'screenshot', base64: result.base64, width: displayWidth, height: displayHeight }));
             toolResults.push({
               type: 'tool_result',
               tool_use_id: block.id,

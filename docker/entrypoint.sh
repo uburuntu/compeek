@@ -21,6 +21,67 @@ echo ""
 # Step counter
 STEP=1
 
+# ── Sidecar mode: bridge to a dockur Windows/macOS VM via VNC ──
+if [ "$DESKTOP_MODE" = "sidecar" ]; then
+  SIDECAR_TARGET="${SIDECAR_TARGET:-localhost}"
+  SIDECAR_VNC_PORT="${SIDECAR_VNC_PORT:-5900}"
+  SIDECAR_VIEWER_PORT="${SIDECAR_VIEWER_PORT:-8006}"
+  SIDECAR_OS="${SIDECAR_OS:-unknown}"
+
+  echo "[${STEP}] Sidecar mode — waiting for VM VNC at ${SIDECAR_TARGET}:${SIDECAR_VNC_PORT}..."
+  STEP=$((STEP + 1))
+  for i in $(seq 1 120); do
+    if nc -z "$SIDECAR_TARGET" "$SIDECAR_VNC_PORT" 2>/dev/null; then
+      echo "  VM VNC is available"
+      break
+    fi
+    if [ "$i" = "120" ]; then
+      echo "  Warning: VM VNC not reachable after 120s, starting anyway"
+    fi
+    sleep 1
+  done
+
+  echo "[${STEP}] Setting up noVNC proxy to VM viewer at ${SIDECAR_TARGET}:${SIDECAR_VIEWER_PORT}..."
+  websockify --web /opt/novnc 6080 ${SIDECAR_TARGET}:${SIDECAR_VIEWER_PORT} &
+  sleep 0.5
+  STEP=$((STEP + 1))
+
+  echo "[${STEP}] Starting sidecar tool server on port ${PORT:-3000}..."
+  cd /home/compeek/app
+  node dist/container/server.js &
+  TOOL_PID=$!
+  sleep 1
+  STEP=$((STEP + 1))
+
+  # Build connection string
+  SESSION_NAME="${COMPEEK_SESSION_NAME:-${SIDECAR_OS} Desktop}"
+  API_PORT="${PORT:-3000}"
+  VNC_PORT="6080"
+
+  CONFIG_JSON="{\"name\":\"${SESSION_NAME}\",\"type\":\"compeek\",\"apiHost\":\"localhost\",\"apiPort\":${API_PORT},\"vncHost\":\"localhost\",\"vncPort\":${VNC_PORT},\"vncPassword\":\"${VNC_PASSWORD}\",\"osType\":\"${SIDECAR_OS}\"}"
+  CONFIG_B64=$(echo -n "$CONFIG_JSON" | base64 -w 0 2>/dev/null || echo -n "$CONFIG_JSON" | base64)
+
+  echo ""
+  echo "========================================="
+  echo "  compeek sidecar (${SIDECAR_OS} VM)"
+  echo "========================================="
+  echo "  Tool API : http://localhost:${API_PORT}"
+  echo "  noVNC    : http://localhost:${VNC_PORT}"
+  echo ""
+  echo "  Connection string:"
+  echo "  ${CONFIG_B64}"
+  echo ""
+  echo "  Dashboard link:"
+  echo "  ${DASHBOARD_URL}/#config=${CONFIG_B64}"
+  echo "========================================="
+  echo ""
+
+  wait $TOOL_PID
+  exit 0
+fi
+
+# ── Standard desktop modes (full, browser, minimal, headless) ──
+
 # 1. Start Xvfb (always needed — tool server uses DISPLAY for screenshots)
 echo "[${STEP}] Starting Xvfb..."
 Xvfb :1 -screen 0 ${WIDTH:-1280}x${HEIGHT:-720}x24 -ac &

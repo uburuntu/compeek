@@ -11,7 +11,7 @@ compeek is a computer use agent framework that turns Claude into an autonomous d
 ```bash
 npm run build              # tsc (container server) + vite build (React app)
 npm run dev:client         # Vite dev server on :5173
-npm test                   # vitest run (19 tests)
+npm test                   # vitest run (51 tests)
 npm run test:watch         # vitest watch mode
 npx vitest run tests/agent/tools.test.ts          # single test file
 npx vitest run -t "handles screenshot action"     # single test by name
@@ -40,6 +40,12 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 - `browser` — Xvfb + XFWM4 + Firefox (no target app, no panel)
 - `minimal` — Xvfb + XFWM4 only (no browser, no panel)
 - `headless` — Xvfb + tool server only (no WM, no VNC)
+- `sidecar` — VNC bridge to external VM (used for Windows/macOS support)
+
+**Windows/macOS VM support** — uses a sidecar pattern with [dockur/windows](https://github.com/dockur/windows) and [dockur/macos](https://github.com/dockur/macos). These run full OS VMs inside Docker via QEMU/KVM. The CLI creates a Docker network with two containers: the dockur VM and a compeek sidecar that bridges via VNC using `vncdotool`. Limitations: requires Linux host with `/dev/kvm`, no bash/text-editor tools (mouse and keyboard only), VM boot is slow.
+- `src/agent/vnc-tools.ts` — VNC-based tool executor using `vncdotool` (mirrors `tools.ts` interface)
+- Agent loop (`src/app/agent/loop.ts`) selects OS-specific system prompts and excludes bash/text_editor tools for non-Linux
+- CLI (`bin/compeek.mjs`) handles `--os linux|windows|macos` flag, KVM validation, and dual-container lifecycle
 
 **Connection strings** — containers print a base64-encoded session config and a clickable dashboard URL on startup. The dashboard reads `#config=<base64>` from the URL hash to auto-add sessions. The Add Session dialog also accepts pasted connection strings.
 
@@ -47,11 +53,11 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 
 - **Browser-native agent**: The AI loop in `src/app/agent/loop.ts` calls Anthropic API from the browser. Tool execution is remote via `POST /api/tool` and `POST /api/bash` to the container's tool server.
 - **Event-driven**: Agent activity produces `AgentEvent` objects (types in `src/agent/types.ts`). Events flow directly from the agent loop to React state via callbacks — no WebSocket layer.
-- **Tool execution**: `src/agent/tools.ts` wraps xdotool/scrot via `child_process.execSync`. Each action returns `{ base64?, error? }`. Used by the container server.
-- **Prompts**: `src/agent/prompts.ts` — `SYSTEM_PROMPT_BASE`, `FORM_FILL_PROMPT`, `GENERAL_WORKFLOW_PROMPT`, `VALIDATION_PROMPT`, `DOCUMENT_EXTRACTION_PROMPT`. Imported in the browser via Vite `@/` alias.
+- **Tool execution**: `src/agent/tools.ts` wraps xdotool/scrot via `child_process.execSync`. `src/agent/vnc-tools.ts` wraps `vncdotool` for VNC-based execution (sidecar mode). Both return `{ base64?, error? }`. Used by the container server.
+- **Prompts**: `src/agent/prompts.ts` — `SYSTEM_PROMPT_BASE`, `SYSTEM_PROMPT_WINDOWS`, `SYSTEM_PROMPT_MACOS`, `FORM_FILL_PROMPT`, `GENERAL_WORKFLOW_PROMPT`, `VALIDATION_PROMPT`, `DOCUMENT_EXTRACTION_PROMPT`. Imported in the browser via Vite `@/` alias.
 - **Session management**: `src/app/hooks/useSession.ts` (per-session state + agent loop), `src/app/hooks/useSessionManager.ts` (CRUD + localStorage). API key stored in browser via `useSettings.ts`.
 - **Connection strings**: `src/app/App.tsx` reads `#config=` from URL hash on mount. `src/app/components/AddSessionDialog.tsx` has a paste box for base64 strings or dashboard URLs.
-- **CLI**: `bin/compeek.mjs` — zero-dep Node.js CLI (`start`, `stop`, `status`, `logs`, `open`). Published as `@rmbk/compeek` on npm, run via `npx @rmbk/compeek`. The `start` command defaults to Cloudflare tunnels (`--no-tunnel` to disable, `--tunnel localtunnel` for localtunnel). Supports `--persist` for data volume, `--mode`, `--password`, `--open`.
+- **CLI**: `bin/compeek.mjs` — zero-dep Node.js CLI (`start`, `stop`, `status`, `logs`, `open`). Published as `@rmbk/compeek` on npm, run via `npx @rmbk/compeek`. The `start` command defaults to Cloudflare tunnels (`--no-tunnel` to disable, `--tunnel localtunnel` for localtunnel). Supports `--persist` for data volume, `--mode`, `--password`, `--open`, `--os linux|windows|macos` (with `--version`, `--ram`, `--cpus`, `--disk` for VMs).
 - **Tailwind theme**: Custom `compeek-*` color tokens in `tailwind.config.js` (dark theme).
 
 ## Build details
@@ -70,8 +76,12 @@ git tag v0.3.0 && git push origin v0.3.0   # publish to npm + Docker (version fr
 - `PORT` — container tool server port (default: `3000`)
 - `DISPLAY` — X11 display for tool execution (default: `:1` in Docker)
 - `COMPEEK_SESSION_NAME` — display name for the container session
-- `DESKTOP_MODE` — `full | browser | minimal | headless` (default: `full`, container only)
+- `DESKTOP_MODE` — `full | browser | minimal | headless | sidecar` (default: `full`, container only)
 - `VNC_PASSWORD` — custom VNC password (auto-generated if omitted, container only)
+- `SIDECAR_TARGET` — hostname of dockur VM container (sidecar mode only)
+- `SIDECAR_VNC_PORT` — VNC port on the VM container (default: `5900`, sidecar mode only)
+- `SIDECAR_VIEWER_PORT` — noVNC viewer port on the VM container (default: `8006`, sidecar mode only)
+- `SIDECAR_OS` — OS type of the VM (`windows` or `macos`, sidecar mode only)
 - `TUNNEL_PROVIDER` — `cloudflare | localtunnel | none` (default: `none`, set by CLI; container only)
 - `DASHBOARD_URL` — base URL for dashboard links in connection strings (default: `https://compeek.rmbk.me`)
 - `VITE_BASE_URL` — Vite base path (default: `./`, set to `/` for GitHub Pages)

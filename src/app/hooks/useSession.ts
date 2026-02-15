@@ -86,6 +86,7 @@ export function useSession(config: SessionConfig, apiKey?: string): SessionState
         apiKey: apiKeyRef.current,
         containerUrl,
         apiToken: config.vncPassword,
+        osType: config.osType,
         documentBase64,
         documentMimeType,
         context: extractedData ? { extractedFields: extractedData } : undefined,

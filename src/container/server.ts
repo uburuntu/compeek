@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { randomUUID } from 'crypto';
 import { executeAction } from '../agent/tools.js';
+import { executeActionVnc } from '../agent/vnc-tools.js';
 import { log } from '../lib/logger.js';
 import type { ComputerAction } from '../agent/types.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -13,6 +14,9 @@ import { createDirectExecutor } from '../mcp/executors.js';
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const IS_SIDECAR = process.env.DESKTOP_MODE === 'sidecar';
+const SIDECAR_OS = process.env.SIDECAR_OS || 'unknown';
 
 // Bearer token auth for dangerous endpoints (POST /api/tool, /api/bash)
 // Uses the session password (same as VNC password) as the shared secret
@@ -45,6 +49,7 @@ app.get('/api/info', (_req, res) => {
     apiPort: parseInt(process.env.PORT || '3000'),
     vncPort: 6080,
     mode: process.env.DESKTOP_MODE || 'full',
+    osType: IS_SIDECAR ? SIDECAR_OS : 'linux',
     tunnel,
   });
 });
@@ -53,7 +58,9 @@ app.get('/api/info', (_req, res) => {
 app.post('/api/tool', requireAuth, async (req, res) => {
   try {
     const action = req.body as ComputerAction;
-    const result = await executeAction(action);
+    const result = IS_SIDECAR
+      ? await executeActionVnc(action)
+      : await executeAction(action);
     res.json(result);
   } catch (err: unknown) {
     res.json({ error: err instanceof Error ? err.message : String(err) });
@@ -62,6 +69,10 @@ app.post('/api/tool', requireAuth, async (req, res) => {
 
 // Execute a bash command
 app.post('/api/bash', requireAuth, (req, res) => {
+  if (IS_SIDECAR) {
+    res.json({ error: `Shell commands are not available for ${SIDECAR_OS} VMs. Use mouse and keyboard actions (computer tool) to interact with the desktop instead.` });
+    return;
+  }
   try {
     const { command } = req.body;
     const output = execSync(command, {

@@ -10,9 +10,15 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const IMAGE = 'ghcr.io/uburuntu/compeek:latest';
+const VM_IMAGES = {
+  windows: 'dockurr/windows:latest',
+  macos: 'dockurr/macos:latest',
+};
+const SIDECAR_IMAGE = IMAGE;
 const CONTAINER_PREFIX = 'compeek-';
 const DASHBOARD_URL = 'https://compeek.rmbk.me';
 const HEALTH_TIMEOUT = 30_000;
+const VM_HEALTH_TIMEOUT = 180_000; // VMs take longer to boot
 const HEALTH_INTERVAL = 1_000;
 
 // ── ANSI Colors ──────────────────────────────────────────
@@ -48,6 +54,38 @@ function hasDocker() {
     return true;
   } catch {
     return false;
+  }
+}
+
+function hasKvm() {
+  try {
+    run('ls /dev/kvm', { allowFail: false });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function validateOsRequirements(os) {
+  if (os === 'linux') return;
+  const platform = process.platform;
+  const osLabel = os === 'windows' ? 'Windows' : 'macOS';
+
+  if (platform === 'darwin') {
+    console.error(`\n  ${c.red}${osLabel} containers require a Linux host with KVM.${c.reset}`);
+    console.error(`  They do not work on macOS Docker Desktop.\n`);
+    process.exit(1);
+  }
+  if (platform === 'win32' && os === 'macos') {
+    console.error(`\n  ${c.red}macOS containers require a Linux host with KVM.${c.reset}`);
+    console.error(`  They do not work on Windows Docker Desktop.\n`);
+    process.exit(1);
+  }
+  if (platform === 'linux' && !hasKvm()) {
+    console.error(`\n  ${c.red}KVM is not available (/dev/kvm not found).${c.reset}`);
+    console.error(`  ${osLabel} containers require hardware virtualization.`);
+    console.error(`  Enable virtualization in BIOS and ensure the kvm kernel module is loaded.\n`);
+    process.exit(1);
   }
 }
 
@@ -190,9 +228,10 @@ function waitForTunnelUrls(host, port, timeout) {
   });
 }
 
-function buildConnectionString(name, apiHost, apiPort, vncHost, vncPort, vncPassword) {
+function buildConnectionString(name, apiHost, apiPort, vncHost, vncPort, vncPassword, osType) {
   const config = { name, type: 'compeek', apiHost, apiPort, vncHost, vncPort };
   if (vncPassword) config.vncPassword = vncPassword;
+  if (osType && osType !== 'linux') config.osType = osType;
   return Buffer.from(JSON.stringify(config)).toString('base64');
 }
 
@@ -243,16 +282,31 @@ async function cmdStart(args) {
   }
 
   const flags = parseFlags(args);
+  const os = flags.os || 'linux';
+  if (!['linux', 'windows', 'macos'].includes(os)) {
+    console.error(`${c.red}Invalid --os value: ${os}${c.reset}. Use: linux, windows, or macos`);
+    process.exit(1);
+  }
+
+  // Validate KVM requirements for Windows/macOS
+  if (os !== 'linux') {
+    validateOsRequirements(os);
+  }
+
   const name = flags.name || findNextName();
   const { apiPort: defaultApi, vncPort: defaultVnc } = findNextPorts();
   const apiPort = parseInt(flags['api-port']) || defaultApi;
   const vncPort = parseInt(flags['vnc-port']) || defaultVnc;
-  const mode = flags.mode || 'full';
+  const mode = os === 'linux' ? (flags.mode || 'full') : 'sidecar';
   const vncPassword = flags.password || crypto.randomBytes(24).toString('base64url').slice(0, 24);
-  const sessionName = name.replace(CONTAINER_PREFIX, '').replace(/^(\d+)$/, 'Desktop $1');
+  const osLabel = os === 'windows' ? 'Windows' : os === 'macos' ? 'macOS' : 'Linux';
+  const sessionName = flags.name
+    ? name.replace(CONTAINER_PREFIX, '')
+    : name.replace(CONTAINER_PREFIX, '').replace(/^(\d+)$/, `${osLabel} $1`);
 
-  // Tunnel provider: cloudflare by default, --no-tunnel to disable, --tunnel <provider> to override
-  const tunnelProvider = flags['no-tunnel'] ? 'none'
+  // Tunnel provider: cloudflare by default for Linux, disabled for VMs in v1
+  const tunnelProvider = os !== 'linux' ? 'none'
+    : flags['no-tunnel'] ? 'none'
     : typeof flags.tunnel === 'string' ? flags.tunnel
     : flags.tunnel === true ? 'cloudflare'
     : 'cloudflare';
@@ -261,60 +315,141 @@ async function cmdStart(args) {
   console.log(`  ${c.bold}${c.cyan}compeek${c.reset}`);
   console.log('');
 
-  if (!flags['no-pull']) {
-    console.log(`  ${c.dim}Pulling image...${c.reset}`);
-    try {
-      run(`docker pull ${IMAGE}`, { stdio: 'inherit' });
-    } catch {
-      console.log(`  ${c.yellow}Pull failed, using cached image.${c.reset}`);
+  if (os === 'linux') {
+    // ── Linux: single container (existing behavior) ──
+    if (!flags['no-pull']) {
+      console.log(`  ${c.dim}Pulling image...${c.reset}`);
+      try {
+        run(`docker pull ${IMAGE}`, { stdio: 'inherit' });
+      } catch {
+        console.log(`  ${c.yellow}Pull failed, using cached image.${c.reset}`);
+      }
+      console.log('');
     }
-    console.log('');
+
+    const info = [
+      `mode:${c.white}${mode}${c.reset}`,
+      `api:${c.white}${apiPort}${c.reset}`,
+      `vnc:${c.white}${vncPort}${c.reset}`,
+    ];
+    if (flags.persist) info.push(`${c.green}persist${c.reset}`);
+    if (tunnelProvider !== 'none') info.push(`${c.yellow}${tunnelProvider}${c.reset}`);
+
+    console.log(`  ${c.cyan}▸${c.reset} Starting ${c.bold}${name}${c.reset}  ${c.dim}${info.join(' · ')}${c.reset}`);
+
+    run(`docker rm -f ${name}`, { allowFail: true });
+
+    run([
+      'docker run -d',
+      `--name ${name}`,
+      `-p ${apiPort}:3000`,
+      `-p ${vncPort}:6080`,
+      `--shm-size=512m`,
+      `-e DISPLAY=:1`,
+      `-e DESKTOP_MODE=${mode}`,
+      `-e COMPEEK_SESSION_NAME="${sessionName}"`,
+      `-e VNC_PASSWORD="${vncPassword}"`,
+      `-e TUNNEL_PROVIDER=${tunnelProvider}`,
+      flags.persist ? `-v ${name}-data:/home/compeek/data` : '',
+      `--security-opt seccomp=unconfined`,
+      IMAGE,
+    ].filter(Boolean).join(' '));
+  } else {
+    // ── Windows/macOS: VM + sidecar containers ──
+    const vmImage = VM_IMAGES[os];
+    const vmName = `${name}-vm`;
+    const netName = `${name}-net`;
+
+    if (!flags['no-pull']) {
+      console.log(`  ${c.dim}Pulling images...${c.reset}`);
+      try {
+        run(`docker pull ${vmImage}`, { stdio: 'inherit' });
+      } catch {
+        console.log(`  ${c.yellow}VM image pull failed, using cached.${c.reset}`);
+      }
+      try {
+        run(`docker pull ${SIDECAR_IMAGE}`, { stdio: 'inherit' });
+      } catch {
+        console.log(`  ${c.yellow}Sidecar image pull failed, using cached.${c.reset}`);
+      }
+      console.log('');
+    }
+
+    const vmVersion = flags.version || (os === 'windows' ? '11' : '15');
+    const vmRam = flags.ram || '4G';
+    const vmCpus = flags.cpus || '2';
+    const vmDisk = flags.disk || '64G';
+
+    const info = [
+      `os:${c.white}${osLabel}${c.reset}`,
+      `ver:${c.white}${vmVersion}${c.reset}`,
+      `ram:${c.white}${vmRam}${c.reset}`,
+      `api:${c.white}${apiPort}${c.reset}`,
+      `vnc:${c.white}${vncPort}${c.reset}`,
+    ];
+    if (flags.persist) info.push(`${c.green}persist${c.reset}`);
+
+    console.log(`  ${c.cyan}▸${c.reset} Starting ${c.bold}${name}${c.reset}  ${c.dim}${info.join(' · ')}${c.reset}`);
+    console.log(`  ${c.yellow}Note:${c.reset} ${osLabel} VM boot is slow. Tunneling not available for VMs.`);
+
+    // Clean up any existing containers/network
+    run(`docker rm -f ${name}`, { allowFail: true });
+    run(`docker rm -f ${vmName}`, { allowFail: true });
+    run(`docker network rm ${netName}`, { allowFail: true });
+
+    // Create dedicated network
+    run(`docker network create ${netName}`);
+
+    // Start dockur VM container
+    run([
+      'docker run -d',
+      `--name ${vmName}`,
+      `--network ${netName}`,
+      `--device /dev/kvm`,
+      `-e VERSION=${vmVersion}`,
+      `-e RAM_SIZE=${vmRam}`,
+      `-e CPU_CORES=${vmCpus}`,
+      `-e DISK_SIZE=${vmDisk}`,
+      os === 'windows' ? '-e USERNAME=User -e PASSWORD=password' : '',
+      flags.persist ? `-v ${name}-data:/storage` : '',
+      `--cap-add NET_ADMIN`,
+      vmImage,
+    ].filter(Boolean).join(' '));
+
+    // Start compeek sidecar container
+    run([
+      'docker run -d',
+      `--name ${name}`,
+      `--network ${netName}`,
+      `-p ${apiPort}:3000`,
+      `-p ${vncPort}:6080`,
+      `-e DESKTOP_MODE=sidecar`,
+      `-e SIDECAR_TARGET=${vmName}`,
+      `-e SIDECAR_VNC_PORT=5900`,
+      `-e SIDECAR_VIEWER_PORT=8006`,
+      `-e SIDECAR_OS=${os}`,
+      `-e COMPEEK_SESSION_NAME="${sessionName}"`,
+      `-e VNC_PASSWORD="${vncPassword}"`,
+      SIDECAR_IMAGE,
+    ].filter(Boolean).join(' '));
   }
 
-  const info = [
-    `mode:${c.white}${mode}${c.reset}`,
-    `api:${c.white}${apiPort}${c.reset}`,
-    `vnc:${c.white}${vncPort}${c.reset}`,
-  ];
-  if (flags.persist) info.push(`${c.green}persist${c.reset}`);
-  if (tunnelProvider !== 'none') info.push(`${c.yellow}${tunnelProvider}${c.reset}`);
-
-  console.log(`  ${c.cyan}▸${c.reset} Starting ${c.bold}${name}${c.reset}  ${c.dim}${info.join(' · ')}${c.reset}`);
-
-  // Remove existing container with same name if stopped
-  run(`docker rm -f ${name}`, { allowFail: true });
-
-  run([
-    'docker run -d',
-    `--name ${name}`,
-    `-p ${apiPort}:3000`,
-    `-p ${vncPort}:6080`,
-    `--shm-size=512m`,
-    `-e DISPLAY=:1`,
-    `-e DESKTOP_MODE=${mode}`,
-    `-e COMPEEK_SESSION_NAME="${sessionName}"`,
-    `-e VNC_PASSWORD="${vncPassword}"`,
-    `-e TUNNEL_PROVIDER=${tunnelProvider}`,
-    flags.persist ? `-v ${name}-data:/home/compeek/data` : '',
-    `--security-opt seccomp=unconfined`,
-    IMAGE,
-  ].filter(Boolean).join(' '));
-
+  const healthTimeout = os === 'linux' ? HEALTH_TIMEOUT : VM_HEALTH_TIMEOUT;
   try {
-    await waitForHealth('localhost', apiPort, HEALTH_TIMEOUT);
+    await waitForHealth('localhost', apiPort, healthTimeout);
   } catch {
     console.error(`\n  ${c.red}Container did not start.${c.reset} Check logs: npx compeek logs`);
     process.exit(1);
   }
 
-  // Wait for tunnel URLs if tunneling is enabled
+  // Wait for tunnel URLs if tunneling is enabled (Linux only)
   let tunnel = null;
   if (tunnelProvider !== 'none' && mode !== 'headless') {
     tunnel = await waitForTunnelUrls('localhost', apiPort, 30_000);
   }
 
   // Build connection strings
-  const localConnStr = buildConnectionString(sessionName, 'localhost', apiPort, 'localhost', vncPort, vncPassword);
+  const localConnStr = buildConnectionString(sessionName, 'localhost', apiPort, 'localhost', vncPort, vncPassword, os);
   let tunnelConnStr = null;
   let dashboardLink;
 
@@ -326,6 +461,7 @@ async function cmdStart(args) {
       apiUrl.hostname, 443,
       vncUrl.hostname, 443,
       vncPassword,
+      os,
     );
     dashboardLink = `${DASHBOARD_URL}/#config=${tunnelConnStr}`;
   } else {
@@ -344,6 +480,11 @@ async function cmdStart(args) {
   if (mode !== 'headless') {
     console.log(`  ${c.dim}Local VNC${c.reset}   http://localhost:${vncPort}`);
     console.log(`  ${c.dim}Password${c.reset}    ${vncPassword}`);
+  }
+  if (os !== 'linux') {
+    console.log('');
+    console.log(`  ${c.yellow}Limitations:${c.reset} No bash/shell access in ${osLabel} VMs.`);
+    console.log(`  ${c.dim}The agent uses mouse, keyboard, and screenshots only.${c.reset}`);
   }
   console.log('');
   console.log(`  ${c.dim}──── Connection string ──────────────────────────${c.reset}`);
@@ -372,6 +513,9 @@ function cmdStop(args) {
     const name = target.startsWith(CONTAINER_PREFIX) ? target : `${CONTAINER_PREFIX}${target}`;
     console.log(`  ${c.cyan}▸${c.reset} Stopping ${c.bold}${name}${c.reset}...`);
     run(`docker rm -f ${name}`, { allowFail: true, stdio: 'inherit' });
+    // Clean up companion VM container and network if they exist
+    run(`docker rm -f ${name}-vm`, { allowFail: true });
+    run(`docker network rm ${name}-net`, { allowFail: true });
     console.log(`  ${c.green}✓${c.reset} Stopped`);
   } else {
     const containers = listContainers();
@@ -382,6 +526,9 @@ function cmdStop(args) {
     for (const ctr of containers) {
       console.log(`  ${c.cyan}▸${c.reset} Stopping ${c.bold}${ctr.name}${c.reset}...`);
       run(`docker rm -f ${ctr.name}`, { allowFail: true });
+      // Clean up companion VM container and network
+      run(`docker rm -f ${ctr.name}-vm`, { allowFail: true });
+      run(`docker network rm ${ctr.name}-net`, { allowFail: true });
     }
     console.log(`  ${c.green}✓${c.reset} Stopped ${containers.length} container(s)`);
   }
@@ -617,6 +764,7 @@ switch (command) {
 
   ${c.bold}Options${c.reset}
     --open ${c.dim}..........${c.reset} Open dashboard after start
+    --os ${c.dim}<os>${c.reset} ${c.dim}........${c.reset} linux ${c.dim}(default)${c.reset} ${c.dim}|${c.reset} windows ${c.dim}|${c.reset} macos
     --mode ${c.dim}<m>${c.reset} ${c.dim}......${c.reset} full ${c.dim}|${c.reset} browser ${c.dim}|${c.reset} minimal ${c.dim}|${c.reset} headless
     --persist ${c.dim}.......${c.reset} Mount volume for persistent data
     --password ${c.dim}<pw>${c.reset} ${c.dim}.${c.reset} Custom VNC password ${c.dim}(auto-generated if omitted)${c.reset}
@@ -626,6 +774,12 @@ switch (command) {
     --name ${c.dim}<n>${c.reset} ${c.dim}......${c.reset} Custom container name
     --api-port ${c.dim}<p>${c.reset} ${c.dim}.${c.reset} Host port for tool API
     --vnc-port ${c.dim}<p>${c.reset} ${c.dim}.${c.reset} Host port for noVNC
+
+  ${c.bold}VM Options${c.reset} ${c.dim}(Windows/macOS only, requires KVM)${c.reset}
+    --version ${c.dim}<v>${c.reset} ${c.dim}..${c.reset} OS version ${c.dim}(Win: 11/10/8; macOS: 11-15)${c.reset}
+    --ram ${c.dim}<size>${c.reset} ${c.dim}....${c.reset} VM RAM ${c.dim}(default: 4G)${c.reset}
+    --cpus ${c.dim}<n>${c.reset} ${c.dim}......${c.reset} VM CPU cores ${c.dim}(default: 2)${c.reset}
+    --disk ${c.dim}<size>${c.reset} ${c.dim}...${c.reset} VM disk size ${c.dim}(default: 64G)${c.reset}
 
   ${c.bold}MCP Options${c.reset}
     --container-url ${c.dim}<u>${c.reset}  Container API URL ${c.dim}(default: auto-detect)${c.reset}

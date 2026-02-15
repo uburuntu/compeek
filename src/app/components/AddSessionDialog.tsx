@@ -5,7 +5,7 @@ import CopyButton from './CopyButton';
 interface Props {
   open: boolean;
   onClose: () => void;
-  onAdd: (config: { name: string; type: 'compeek' | 'vnc-only'; apiHost: string; apiPort: number; vncHost: string; vncPort: number; vncPassword?: string }) => void;
+  onAdd: (config: { name: string; type: 'compeek' | 'vnc-only'; apiHost: string; apiPort: number; vncHost: string; vncPort: number; vncPassword?: string; osType?: 'linux' | 'windows' | 'macos' }) => void;
 }
 
 export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
@@ -22,6 +22,7 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
   const [showManual, setShowManual] = useState(false);
   const [showDocker, setShowDocker] = useState(false);
   const [vncPassword, setVncPassword] = useState('');
+  const [osType, setOsType] = useState<'linux' | 'windows' | 'macos'>('linux');
   const testHostRef = useRef('');
   const testPortRef = useRef('');
 
@@ -58,6 +59,7 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
         setVncPort(String(json.vncPort));
         setMode(json.type === 'vnc-only' ? 'vnc-only' : 'compeek');
         setVncPassword(json.vncPassword || '');
+        setOsType(json.osType || 'linux');
         setConnectionString('');
         setPasteSuccess(true);
         setTimeout(() => setPasteSuccess(false), 3000);
@@ -89,6 +91,7 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
       vncHost: host,
       vncPort: parseInt(vncPort) || 6080,
       ...(vncPassword ? { vncPassword } : {}),
+      ...(osType !== 'linux' ? { osType } : {}),
     });
     setName('');
     setApiPort('3001');
@@ -98,6 +101,7 @@ export default function AddSessionDialog({ open, onClose, onAdd }: Props) {
     setShowManual(false);
     setShowDocker(false);
     setVncPassword('');
+    setOsType('linux');
     onClose();
   };
 
